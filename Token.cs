@@ -3,19 +3,19 @@ public class Token
     /// <summary>
     /// Type of the token
     /// </summary>
-    TokenTypes type;
+    public TokenTypes type{get;private set;}
     /// <summary>
     /// Token in string
     /// </summary>
-    string writing;
+    public string writing{get;private set;}
     /// <summary>
     /// 
     /// </summary>
-    Object literal;
+    public object literal{get;private set;}
     /// <summary>
     /// Line of the token
     /// </summary>
-    int line;
+    public int line{get;private set;}
     /// <summary>
     /// Constructor of Token
     /// </summary>
@@ -23,7 +23,7 @@ public class Token
     /// <param name="writing"></param>
     /// <param name="literal"></param>
     /// <param name="line"></param>
-    public Token(TokenTypes type,string writing , Object literal, int line)
+    public Token(TokenTypes type,string writing , object literal, int line)
     {
         this.type = type;
         this.writing = writing;

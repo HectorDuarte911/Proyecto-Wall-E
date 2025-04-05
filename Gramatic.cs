@@ -111,7 +111,7 @@ public class Gramatic
   /// </summary>
   /// <param name="type">Type of the token added</param>
   /// <param name="literal">literal of the token added</param>
-  private void AddTokenHelper(TokenTypes type , Object literal)
+  private void AddTokenHelper(TokenTypes type , object literal)
   {
     string text = source.Substring(start , current);
     tokens.Add(new Token(type,text,literal,line));
@@ -169,4 +169,6 @@ public class Gramatic
     while(ISDigit(LookAfter()))Advance();
     AddTokenHelper(TokenTypes.NUMBER,source.Substring(start,current));
   }
+
+
 }
