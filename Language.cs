@@ -1,11 +1,12 @@
 using System.Text;
-
 public class Language
 {
+    private static Interpreter interpreter = new Interpreter();
     /// <summary>
     /// Report if is an error
     /// </summary>
     private static  bool HadError = false;
+    private static bool HadRuntimeError = false;
    /// <summary>
    /// Intermade a type of errror
    /// </summary>
@@ -60,15 +61,10 @@ public class Language
    /// <param name="path"></param>
     static void RunFile(string path)
     {
-     try
-     {
-      string content = File.ReadAllText(path,Encoding.Default);
-      Run(content);
-     }
-     catch(IOException e)
-     {
-        Console.WriteLine($"Error reading the file: {e.Message}");
-     }
+     byte[] bytes= File.ReadAllBytes(path);
+     Run(Encoding.Default.GetString(bytes));
+     if(HadError)Environment.Exit(65);
+     if(HadRuntimeError)Environment.Exit(70);
     }
     /// <summary>
     /// Comunicate the writing whith the sintaxix and the gramatic
@@ -81,6 +77,7 @@ public class Language
         Parser parser = new Parser(tokens);
         Expresion expresion = parser.parse();
         if(HadError)return;
+        interpreter.interpret(expresion);
         Console.WriteLine(expresion);
     }
   /// <summary>
@@ -96,5 +93,10 @@ public class Language
         if(line == null)break;
         Run(line);
       }
+    }
+    public static void runtimerror(RuntimeError error)
+    {
+      Console.WriteLine($"{error.Message}\n[line {error.token.line}]");
+      HadRuntimeError = true;
     }
 }

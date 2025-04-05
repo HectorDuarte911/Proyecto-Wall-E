@@ -3,11 +3,18 @@
 /// </summary>
 public abstract class Expresion
 {
-    /// <summary>
+
+ public abstract object accept(IVisitor <object> visitor);
+}
+/// <summary>
 /// Represents all the operation between two expresions
 /// </summary>
 public class Binary : Expresion
 {
+    public override object accept(IVisitor<object> visitor)
+    {
+        return visitor.visitBinary(this);
+    }
     public Expresion? Leftside {get;}
     public Token? Operator {get;}
     public Expresion? Rightside {get;}
@@ -23,6 +30,10 @@ public class Binary : Expresion
 /// </summary>
 public class Grouping : Expresion
 {
+    public  override object accept(IVisitor<object> visitor)
+    {
+        return visitor.visitGrouping(this);
+    }
     public Expresion? expresion {get;}
     public Grouping(Expresion expresion)
     {
@@ -34,6 +45,10 @@ public class Grouping : Expresion
 /// </summary>
 public class Literal : Expresion
 {
+    public  override object accept(IVisitor<object> visitor)
+    {
+        return visitor.visitLiteral(this);
+    }
     public object Value {get;}
     public Literal(object value)
     {
@@ -45,6 +60,10 @@ public class Literal : Expresion
 /// </summary>
 public class Unary : Expresion
 {
+    public  override object accept(IVisitor<object> visitor)
+    {
+        return visitor.visitUnary(this);
+    }
     public Token? Operator {get;}
     public Expresion? Rightside {get;}
     public Unary(Token operatortoken,Expresion rightside)
@@ -52,5 +71,4 @@ public class Unary : Expresion
         Rightside = rightside;
         Operator = operatortoken;
     }
-}
 }

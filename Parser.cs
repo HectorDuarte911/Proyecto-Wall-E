@@ -98,7 +98,7 @@ public class Parser
     {
       Token Operator = tokens[current - 1];
       Expresion right = comparison();
-      expresion = new Expresion.Binary(expresion, Operator, right);
+      expresion = new Binary(expresion, Operator, right);
     }
     return expresion;
   }
@@ -114,7 +114,7 @@ public class Parser
     {
       Token Operator = tokens[current - 1];
       Expresion right = term();
-      expresion = new Expresion.Binary(expresion, Operator, right);
+      expresion = new Binary(expresion, Operator, right);
     }
     return expresion;
   }
@@ -129,7 +129,7 @@ public class Parser
     {
       Token Operator = tokens[current - 1];
       Expresion right = factor();
-      expresion = new Expresion.Binary(expresion, Operator, right);
+      expresion = new Binary(expresion, Operator, right);
     }
     return expresion;
   }
@@ -144,7 +144,7 @@ public class Parser
     {
       Token Operator = tokens[current - 1];
       Expresion right = unary();
-      expresion = new Expresion.Binary(expresion, Operator, right);
+      expresion = new Binary(expresion, Operator, right);
     }
     return expresion;
   }
@@ -159,7 +159,7 @@ public class Parser
     {
       Token Operator = tokens[current - 1];
       Expresion right = unary();
-      return new Expresion.Unary(Operator, right);
+      return new Unary(Operator, right);
     }
     return primary();
   }
@@ -169,7 +169,7 @@ public class Parser
     {
     TokenTypes.STRING,TokenTypes.NUMBER,
     };
-    if (match(types)) return new Expresion.Literal(tokens[current - 1].literal);
+    if (match(types)) return new Literal(tokens[current - 1].literal);
     List<TokenTypes> typesparen = new List<TokenTypes>()
     {
     TokenTypes.LEFT_PAREN,
@@ -178,7 +178,7 @@ public class Parser
     {
       Expresion expresion = Expresion();
       consume(TokenTypes.RIGHT_PAREN, "Expect ')' after expression");
-      return new Expresion.Grouping(expresion);
+      return new Grouping(expresion);
     }
     throw error(tokens[current], "Expect expression");
   }

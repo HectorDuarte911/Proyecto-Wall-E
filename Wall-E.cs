@@ -1,12 +1,9 @@
-using System.Runtime.CompilerServices;
-
 public class Walle 
 {
     public static int Colum {get;private set;}
     public static int Row {get;private set;}
     public static int PincelSize {get;private set;}
     public static string? PincelColor {get ; private set;}
-    
     public static void Spawn(int x, int y)
     {
         if(Canva.IsOutRange(x,y))throw new Exception("Is out of range look at it");
