@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Proyecto-Wall-E")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+178ba6a4ed38b6dba3575961fa2dd85e101c2b68")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0fbdffe4bd183c4c9a9181c48142c4b6bef416da")]
 [assembly: System.Reflection.AssemblyProductAttribute("Proyecto-Wall-E")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Proyecto-Wall-E")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

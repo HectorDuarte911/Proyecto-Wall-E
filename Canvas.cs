@@ -4,7 +4,7 @@ public class Canva
     /// <summary>
     /// Canvas  panel to save the actual colors in the diferents positions
     /// </summary>
-    public static string?[,] canvas { get; private set; }
+    protected static string [,]? canvas ;
     /// <summary>
     /// Comprobate if the position selected is out of the dimension of the actual canvas
     /// </summary>
@@ -13,7 +13,7 @@ public class Canva
     /// <returns></returns>
     public static bool IsOutRange(int x, int y)
     {
-        if (x >= canvas.Length || y >= canvas.Length || x < 0 || y < 0) return true;
+        if (x >= canvas!.Length || y >= canvas.Length || x < 0 || y < 0) return true;
         return false;
     }
     /// <summary>
@@ -46,14 +46,38 @@ public class Canva
     {
         string?[,] NewCanvas = new string[dim, dim];
         InitInWhite(NewCanvas);
-        int MaxDim = Math.Max(dim, canvas.Length);
+        int MaxDim = Math.Max(dim, canvas!.Length);
         for (int i = 0; i < MaxDim; i++)
         {
             for (int j = 0; j < MaxDim; j++)
             {
                 NewCanvas[i, j] = canvas[i, j];
             }
-            canvas = NewCanvas;
+            canvas = NewCanvas!;
         }
     }
+   public static int GetCanvasSize()
+    {
+        return canvas!.GetLength(0);
+    }
+    public static int GetColorCount(string? color,int x1, int y1,int x2, int y2)
+    {
+        int MaxX = Math.Max(x1,x2);
+        int MinX = Math.Min(x1,x2);
+        int MaxY = Math.Max(y1,y2);
+        int MinY = Math.Min(y1,y2);
+        int count = 0;
+        for (int i = MinX; i <= MaxX; i++)
+        {
+            for (int j = MinY; j <= MaxY; j++)
+            {
+                if(!IsOutRange(i,j) && canvas![i,j] == color)count++;
+            }
+        }
+        return count;
+    }
+    public static bool IsCanvasColor(string ? color , int vertical , int horizontal)
+    {
+      return canvas![Walle.GetActualX() + vertical , Walle.GetActualY() + horizontal] == color;
+    } 
 }
