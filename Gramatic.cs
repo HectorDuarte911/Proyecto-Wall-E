@@ -24,7 +24,7 @@ public class Gramatic
     /// Constructor of Gramatic
     /// </summary>
     /// <param name="source"></param>
-    public Gramatic (string? source)
+    public Gramatic (string source)
     {
         this.source = source;
     }
@@ -39,7 +39,7 @@ public class Gramatic
             start= current;
             InspectTokens();
         }
-        tokens.Add(new Token(TokenTypes.EOF," ",null,line));
+        tokens.Add(new Token(TokenTypes.EOF," ",null!,line));
         return tokens;
    }
    /// <summary>
@@ -74,11 +74,8 @@ public class Gramatic
         case ']' : AddToken(TokenTypes.RIGHT_BRACE);break;
         case '/' : AddToken(TokenTypes.DIVIDE);break;
         case '|' : current++;if(Match('|'))AddToken(TokenTypes.OR);
-        else Language.Error(line , "Unexpected character '|' ,maybe you want to use ||");
-        break;
-        case '&' : current++;if(Match('&'))AddToken(TokenTypes.OR);
-        else Language.Error(line , "Unexpected character '&' ,maybe you want to use &&");
-        break;
+        else Language.Error(line , "Unexpected character '|' ,maybe you want to use ||");break;
+        case '&' : AddToken(Match('&') ? TokenTypes.AND : TokenTypes.AND);break;
         case '%' : AddToken(TokenTypes.MODUL);break;
         case ',' : AddToken(TokenTypes.COMMA);break;
         case '+' : AddToken(TokenTypes.PLUS);break;
@@ -94,9 +91,26 @@ public class Gramatic
         case '"':StringRead();break;
         default:
         if(ISDigit(c))NumberRead();
+        else if(IsAlpha(c))identifier();
         else Language.Error(line , "Unexpected character");
         break;
     } 
+  }
+  private void identifier()
+  {
+    while(IsAlphaNumeric(LookAfter()))Advance();
+    string text = source.Substring(start , current);
+    TokenTypes type = TokenTypes.IDENTIFIER;
+    if(Keywords.keywords.ContainsKey(text))type = Keywords.keywords[text];
+    AddToken(type);
+  }
+  private bool IsAlpha(char c)
+  {
+    return (c >= 'a' && c <= 'z')|| (c >= 'A' && c <= 'Z') || c == '_';
+  }
+  private bool IsAlphaNumeric(char c)
+  {
+    return IsAlpha(c) || ISDigit(c);
   }
   /// <summary>
   /// Call the auxiliar to add a neutral token whith no literal
@@ -104,7 +118,7 @@ public class Gramatic
   /// <param name="type"></param>
   private void AddToken(TokenTypes type)
   {
-    AddTokenHelper(type, null);
+    AddTokenHelper(type, null!);
   }
   /// <summary>
   /// Add the token to the list of tokens in the line
@@ -169,6 +183,15 @@ public class Gramatic
     while(ISDigit(LookAfter()))Advance();
     AddTokenHelper(TokenTypes.NUMBER,source.Substring(start,current));
   }
-
-
+public class Keywords
+{
+public static readonly Dictionary<string , TokenTypes> keywords ;
+static Keywords()
+{
+ keywords = new Dictionary<string ,TokenTypes>
+{
+  {"Go to", TokenTypes.GOTO},
+};
+}
+}
 }

@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-using Microsoft.CSharp.RuntimeBinder;
 /// <summary>
 /// Inspect the sintasix of a line
 /// </summary>
@@ -25,13 +23,73 @@ public class Parser
   /// Ejecute the parsing
   /// </summary>
   /// <returns>Expresion parsing</returns>
-  public Expresion parse()
+  public List<Stmt> parse()
   {
-  try{
-    return Expresion();
-  }catch (ParseError error){
-    return null;
+    List<Stmt> statementslist = new List<Stmt>();
+    while(!IsTheEnd())
+    {
+      statementslist.Add(statement());
     }
+    return statementslist;
+  }
+  private Expresion assignment()
+  {
+    Expresion expresion = or();
+    List<TokenTypes>type = new List<TokenTypes>(){TokenTypes.ASSIGNED};
+    if(match(type))
+    {
+      Token assing = tokens[current - 1];
+      Expresion value = assignment();
+      if(expresion is Variable variable)
+      {
+        Token? name = variable.name;
+        return new Assign(name! , value);
+      }
+      error(assing,"Invalid assignment target");
+    }
+    return expresion;
+  }
+  private Expresion or()
+  {
+    Expresion expresion = and();
+    List<TokenTypes>type = new List<TokenTypes>(){TokenTypes.OR};
+    while(match(type))
+    {
+      Token Operator = tokens[current -1];
+      Expresion right = and();
+      expresion = new Logical(expresion,Operator,right);
+    }
+    return expresion;
+  }
+  private Expresion and()
+  {
+    Expresion expresion = Equality();
+    List<TokenTypes>type = new List<TokenTypes>(){TokenTypes.AND};
+    while(match(type))
+    {
+      Token Operator = tokens[current - 1];
+      Expresion right  = Equality();
+      expresion = new Logical(expresion , Operator,right);
+    }
+    return expresion;
+  }
+ private Stmt statement()
+ {
+  List<TokenTypes> matchlist = new List<TokenTypes>(){TokenTypes.GOTO};
+  if(match(matchlist))return GoToStatement();
+  return expressionStatements();
+ }
+  private Stmt GoToStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after 'GoTo' .");
+    Expresion condition = Expresion();
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' after the condition .");
+    return new GoTo(condition);
+  }
+  private Stmt expressionStatements()
+  {
+    Expresion expresion = Expresion();
+    return  new Expression(expresion);
   }
   /// <summary>
   /// See is the token in the current position is one of the types of the list
@@ -83,7 +141,7 @@ public class Parser
   /// <returns></returns>
   private Expresion Expresion()
   {
-    return Equality();
+    return assignment();
   }
   //This is the order of implimentestion than the Expesion method comprove is brute for time
   private Expresion Equality()
@@ -169,12 +227,14 @@ public class Parser
     {
     TokenTypes.STRING,TokenTypes.NUMBER,
     };
-    if (match(types)) return new Literal(tokens[current - 1].literal);
-    List<TokenTypes> typesparen = new List<TokenTypes>()
-    {
-    TokenTypes.LEFT_PAREN,
-    };
-    if (match(typesparen))
+    if(match(types)) return new Literal(tokens[current - 1].literal);
+    types.Remove(TokenTypes.STRING);
+    types.Remove(TokenTypes.NUMBER);
+    types.Add(TokenTypes.IDENTIFIER);
+    if(match(types))return new Variable(tokens[current - 1]);
+    types.Remove(TokenTypes.IDENTIFIER);
+    types.Add(TokenTypes.LEFT_PAREN);
+    if (match(types))
     {
       Expresion expresion = Expresion();
       consume(TokenTypes.RIGHT_PAREN, "Expect ')' after expression");
@@ -205,5 +265,4 @@ public class Parser
     Language.error(token, message);
     return new ParseError();
   }
-
 }

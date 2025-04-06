@@ -3,15 +3,38 @@
 /// </summary>
 public abstract class Expresion
 {
-
- public abstract object accept(IVisitor <object> visitor);
+public interface IVisitor<R>
+{
+ public R visitBinary(Binary binary);
+ public R visitGrouping(Grouping grouping);
+ public R visitUnary(Unary unary);
+ public R visitLiteral(Literal literal);
+ public R visitVariable(Variable variable);
+ public R visitAssign(Assign assign);
+ public R visitLogical(Logical logical);
+}
+ public abstract R accept<R>(IVisitor <R> visitor);
+}
+public class Assign : Expresion
+{
+    public Token? name {get;private set;}
+    public Expresion? value {get ;private set;}  
+    public Assign(Token name,Expresion  value)
+    {
+        this.name = name;
+        this.value = value;
+    }
+    public override R accept<R>(IVisitor<R> visitor)
+    {
+        return visitor.visitAssign(this);
+    }
 }
 /// <summary>
 /// Represents all the operation between two expresions
 /// </summary>
 public class Binary : Expresion
 {
-    public override object accept(IVisitor<object> visitor)
+    public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.visitBinary(this);
     }
@@ -30,7 +53,7 @@ public class Binary : Expresion
 /// </summary>
 public class Grouping : Expresion
 {
-    public  override object accept(IVisitor<object> visitor)
+    public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.visitGrouping(this);
     }
@@ -45,7 +68,7 @@ public class Grouping : Expresion
 /// </summary>
 public class Literal : Expresion
 {
-    public  override object accept(IVisitor<object> visitor)
+    public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.visitLiteral(this);
     }
@@ -60,7 +83,7 @@ public class Literal : Expresion
 /// </summary>
 public class Unary : Expresion
 {
-    public  override object accept(IVisitor<object> visitor)
+    public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.visitUnary(this);
     }
@@ -72,3 +95,32 @@ public class Unary : Expresion
         Operator = operatortoken;
     }
 }
+public class Variable : Expresion
+{
+   public override R accept<R>(IVisitor<R> visitor)
+    {
+        return visitor.visitVariable(this);
+    }
+    public Token? name {get;}
+    public Variable(Token name)
+    {
+        this.name = name;
+    } 
+}
+public class Logical : Expresion
+{
+   public override R accept<R>(IVisitor<R> visitor)
+    {
+        return visitor.visitLogical(this);
+    }
+    public Expresion left {get; private set;}
+    public Token Operator {get ; private set;}
+    public Expresion right {get;private set;}
+    public Logical (Expresion left,Token Operator,Expresion right)
+    {
+        this.left =left;
+        this.Operator = Operator;
+        this.right =right;
+    }
+}
+

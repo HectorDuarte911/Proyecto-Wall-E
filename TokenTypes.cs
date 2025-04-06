@@ -13,5 +13,7 @@ public enum TokenTypes
  //Lierals
  IDENTIFIER, STRING, NUMBER, LABEL, 
  //Represent the last character of the line
- EOF
+ EOF,
+ //Funcions keywords
+ GOTO,
 }

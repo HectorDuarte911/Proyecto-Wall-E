@@ -75,10 +75,10 @@ public class Language
         Gramatic scaner = new Gramatic(source);
         List<Token> tokens = scaner.TokensSearch();
         Parser parser = new Parser(tokens);
-        Expresion expresion = parser.parse();
+        List<Stmt> statements = parser.parse();
         if(HadError)return;
-        interpreter.interpret(expresion);
-        Console.WriteLine(expresion);
+        interpreter.interpret(statements);
+        Console.WriteLine(statements);
     }
   /// <summary>
   /// Put the cursor in the place to write the code

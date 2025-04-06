@@ -1,17 +1,52 @@
-public class Interpreter : IVisitor<object>
+public class Void{}
+public class Interpreter : Expresion.IVisitor<object>,Stmt.IVisitor<Void>
 {
+private Enviroment enviroment = new Enviroment();
+public Void VisitExpressionStmt(Expression stmt)
+{
+ evaluate(stmt.expresion);
+ return new Void();
+}
+public Void VisitVarStmt(Var var)
+{
+   object? value = null;
+   if(var.initializer != null)value = evaluate(var.initializer);
+   enviroment.difine(var.name.writing,value!);
+   return null!;
+}
+public Void VisitGoToStmt(GoTo stmt)
+{
+    Console.WriteLine("Se activo go to");
+    return new Void();
+}
+public object visitAssign(Assign expresion)
+{
+ object value = evaluate(expresion.value!);
+ enviroment.assign(expresion.name!,value);
+ return value;
+}
+public object visitLogical(Logical expresion)
+{
+ object left = evaluate(expresion.left);
+ if(expresion.Operator.type == TokenTypes.OR)
+ {
+    if(IsTrue(left))return left;
+ }
+ else if (!IsTrue(left))return left;
+ return evaluate(expresion.right);
+}
 public object visitLiteral(Literal expresion)
 {
 return expresion.Value;
 }
 public object visitGrouping(Grouping expresion)
 {
-return evaluate(expresion.expresion);
+return evaluate(expresion.expresion!);
 }
 public object visitUnary(Unary expresion)
 {
-    object right  = evaluate(expresion.Rightside);
-    switch (expresion.Operator.type)
+    object right  = evaluate(expresion.Rightside!);
+    switch (expresion.Operator!.type)
     {
         case TokenTypes.BANG :
         return !IsTrue(right);
@@ -19,13 +54,17 @@ public object visitUnary(Unary expresion)
         NumberOperand(expresion.Operator,right);
         return (int)right * (int)right;
     }
-    return null;
+    return null!;
+}
+public object visitVariable(Variable expresion)
+{
+  return enviroment.get(expresion.name!);
 }
 public object visitBinary(Binary expresion)
 {
-    object left = evaluate(expresion.Leftside);
-    object right = evaluate(expresion.Rightside);
-    switch(expresion.Operator.type)
+    object left = evaluate(expresion.Leftside!);
+    object right = evaluate(expresion.Rightside!);
+    switch(expresion.Operator!.type)
     {
         case TokenTypes.MINUS:
         NumberOperands(expresion.Operator,left,right);
@@ -57,7 +96,7 @@ public object visitBinary(Binary expresion)
         return IsEqual(left,right);
 
     }
-    return null;
+    return null!;
 }
 private bool IsEqual(object left,object right)
 {
@@ -85,22 +124,23 @@ private void NumberOperands(Token Operator,object left,object right)
 if(left is int && right is int)return;
 throw new RuntimeError(Operator,"Operands must be a numbers");
 }
-public void interpret(Expresion expresion)
+public void interpret(List<Stmt>statements)
 {
-    try
+ try
+ {
+    foreach (Stmt statement in statements)
     {
-        object value = evaluate(expresion);
-        Console.WriteLine(stringif(value));
+        execute(statement);
     }
-    catch (RuntimeError error)
-    {
-      Language.runtimerror(error);
-    }
+ }
+ catch (RuntimeError error)
+ {
+    Language.runtimerror(error);
+ }
 }
-private string stringif(object obj)
+private void execute(Stmt stmt)
 {
-    if(obj == null)return "null";
-    return obj.ToString();
+    stmt.accept(this);
 }
 }
 public class RuntimeError : Exception
