@@ -1,23 +1,45 @@
 public class Void{}
 public class Interpreter : Expresion.IVisitor<object>,Stmt.IVisitor<Void>
 {
-private Enviroment enviroment = new Enviroment();
+public List<Error> errors {get ; private set;}
+private Enviroment enviroment;
+public Interpreter(List<Error> errors)
+{
+  this.errors = errors;
+  enviroment = new Enviroment(errors);
+} 
+public void interpret(List<Stmt>statements, int begin)
+{
+    bool flag =false;
+    while(begin < statements.Count){
+    if(statements[begin] is GoTo ){
+    GoTo? aux = statements[begin] as GoTo;
+    if(IsTrue(aux!.condition)){
+        flag = true;
+        begin = aux.label!.tag.line;
+        break;
+      }
+    }else execute(statements[begin]);
+     begin++;
+    }
+    if(flag)interpret(statements,begin);
+ }
+private void execute(Stmt stmt)
+{
+    stmt.accept(this);
+}
 public Void VisitExpressionStmt(Expression stmt)
 {
  evaluate(stmt.expresion);
  return new Void();
 }
-public Void VisitVarStmt(Var var)
-{
-   object? value = null;
-   if(var.initializer != null)value = evaluate(var.initializer);
-   enviroment.difine(var.name.writing,value!);
-   return null!;
-}
 public Void VisitGoToStmt(GoTo stmt)
 {
-    Console.WriteLine("Se activo go to");
-    return new Void();
+ return new Void();
+}
+public Void VisitLabelStmt(Label stmt)
+{
+  return new Void();
 }
 public object visitAssign(Assign expresion)
 {
@@ -52,7 +74,7 @@ public object visitUnary(Unary expresion)
         return !IsTrue(right);
         case TokenTypes.POW :
         NumberOperand(expresion.Operator,right);
-        return (int)right * (int)right;
+        return Convert.ToInt32(right) * Convert.ToInt32(right);
     }
     return null!;
 }
@@ -68,33 +90,35 @@ public object visitBinary(Binary expresion)
     {
         case TokenTypes.MINUS:
         NumberOperands(expresion.Operator,left,right);
-        return (int)left - (int)right;
+        return Convert.ToInt32(left) - Convert.ToInt32(right);
         case TokenTypes.PLUS:
         NumberOperands(expresion.Operator,left,right);
-        return (int)left + (int)right;
+        return Convert.ToInt32(left) + Convert.ToInt32(right);
+        case TokenTypes.MODUL:
+        NumberOperands(expresion.Operator,left,right);
+        return Convert.ToInt32(left) % Convert.ToInt32(right);
         case TokenTypes.DIVIDE:
         NumberOperands(expresion.Operator,left,right);
-        return (int)left / (int)right;
+        return Convert.ToInt32(left) / Convert.ToInt32(right);
         case TokenTypes.PRODUCT:
         NumberOperands(expresion.Operator,left,right);
-        return (int)left * (int)right;
+        return Convert.ToInt32(left) * Convert.ToInt32(right);
         case TokenTypes.GREATER:
         NumberOperands(expresion.Operator,left,right);
-        return (int)left > (int)right;
+        return Convert.ToInt32(left) > Convert.ToInt32(right);
         case TokenTypes.GREATER_EQUAL:
         NumberOperands(expresion.Operator,left,right);
-        return (int)left >= (int)right;
+        return Convert.ToInt32(left) >= Convert.ToInt32(right);
         case TokenTypes.LESS:
         NumberOperands(expresion.Operator,left,right); 
-        return (int)left < (int)right;
+        return Convert.ToInt32(left) < Convert.ToInt32(right);
         case TokenTypes.LESS_EQUAL:
         NumberOperands(expresion.Operator,left,right);
-        return (int)left <= (int)right;
+        return Convert.ToInt32(left) <= Convert.ToInt32(right);
         case TokenTypes.BANG_EQUAL:
         return !IsEqual(left,right);
         case TokenTypes.EQUAL_EQUAL:
         return IsEqual(left,right);
-
     }
     return null!;
 }
@@ -116,38 +140,15 @@ private object evaluate(Expresion expresion)
 }
 private void NumberOperand(Token Operator,object operand)
 {
-if(operand is int)return;
-throw new RuntimeError(Operator,"Operand must be a number");
+if(operand is string operandtring  && int.TryParse(operandtring,out int operandInt))return;
+errors.Add(new Error(Operator.line,"Operand must be a number"));
 }
 private void NumberOperands(Token Operator,object left,object right)
 {
-if(left is int && right is int)return;
-throw new RuntimeError(Operator,"Operands must be a numbers");
-}
-public void interpret(List<Stmt>statements)
-{
- try
+ if(left is string leftstring && right is string rightstring)
  {
-    foreach (Stmt statement in statements)
-    {
-        execute(statement);
-    }
+    if(int.TryParse(leftstring,out int leftInt) && int.TryParse(rightstring,out int rightInt))return;
  }
- catch (RuntimeError error)
- {
-    Language.runtimerror(error);
- }
+errors.Add(new Error (Operator.line,"Operands must be a numbers"));
 }
-private void execute(Stmt stmt)
-{
-    stmt.accept(this);
-}
-}
-public class RuntimeError : Exception
-{
- public Token token {get;}
- public RuntimeError(Token token,string message):base(message)
- {
-    this.token = token;
- }
 }

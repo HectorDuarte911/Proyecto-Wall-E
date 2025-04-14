@@ -11,9 +11,9 @@ public enum TokenTypes
   //Grouping
   LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
  //Lierals
- IDENTIFIER, STRING, NUMBER, LABEL, 
- //Represent the last character of the line
- EOF,
+ IDENTIFIER, STRING, NUMBER,
  //Funcions keywords
  GOTO,
+ //Label
+ LABEL,
 }

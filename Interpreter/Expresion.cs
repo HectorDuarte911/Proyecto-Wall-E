@@ -101,7 +101,7 @@ public class Variable : Expresion
     {
         return visitor.visitVariable(this);
     }
-    public Token? name {get;}
+    public Token name {get;}
     public Variable(Token name)
     {
         this.name = name;
@@ -123,4 +123,3 @@ public class Logical : Expresion
         this.right =right;
     }
 }
-

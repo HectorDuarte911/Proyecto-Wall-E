@@ -30,8 +30,4 @@ public class Token
         this.literal = literal;
         this.line = line;
     }
-    public string toString()
-    {
-        return type + " " + writing + " " + literal;
-    }
 }

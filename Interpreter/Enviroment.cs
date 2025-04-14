@@ -1,10 +1,16 @@
 public class Enviroment
 {
  private Dictionary<string,object> values = new Dictionary<string,object>();
+ public List<Error> errors {get; private set;}
+ public Enviroment(List<Error> errors)
+ {
+   this.errors = errors;
+ }
  public object get (Token name)
  {
     if(values.ContainsKey(name.writing))return values[name.writing];
-    throw new RuntimeError(name,"Undefined variable ' "+ name.writing + "'.");
+    errors.Add(new Error(name.line,"Undefined variable ' "+ name.writing + "'."));
+    throw new Exception("Esperate#");
  }
  public void difine(string name,object value)
  {
@@ -17,6 +23,6 @@ public class Enviroment
         values.Add(name.writing,value);
         return;
     }
-    throw new RuntimeError(name,"undefined variable '" + name.writing + "'.");
+    errors.Add(new Error (name.line,"undefined variable '" + name.writing + "'."));
  }
 }
