@@ -1,3 +1,4 @@
+namespace WALLE;
 public abstract class Stmt
 {
 public interface IVisitor<R>

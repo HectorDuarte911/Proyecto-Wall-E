@@ -1,3 +1,4 @@
+namespace WALLE;
 using System.Text;
 public class Language
 {
@@ -8,6 +9,7 @@ public class Language
   /// </summary>
   public static void Main(string[] args)
   {
+    Console.Clear();
     if (args.Length > 1)
     {
       Environment.Exit(64);
@@ -45,6 +47,7 @@ public class Language
   /// Comunicate the writing whith the sintaxix and the Lexical
   /// </summary>
   /// <param name="source"></param>
+  
   private static void Run(string source)
   {
     Lexical scaner = new Lexical(source);

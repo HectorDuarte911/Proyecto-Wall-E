@@ -1,3 +1,4 @@
+namespace WALLE;
 public class Enviroment
 {
  private Dictionary<string,object> values = new Dictionary<string,object>();
@@ -9,10 +10,10 @@ public class Enviroment
  public object get (Token name)
  {
     if(values.ContainsKey(name.writing))return values[name.writing];
-    errors.Add(new Error(name.line,"Undefined variable ' "+ name.writing + "'."));
-    throw new Exception("Esperate#");
+    errors.Add(new Error(name.line,"Undefined variable ' "+ name.writing + " '" ));
+    return null;
  }
- public void difine(string name,object value)
+ private void define(string name,object value)
  {
     values.Add(name,value);
  }
@@ -20,9 +21,9 @@ public class Enviroment
  {
     if(values.ContainsKey(name.writing))
     {
-        values.Add(name.writing,value);
-        return;
+      values[name.writing] = value;
+      return;
     }
-    errors.Add(new Error (name.line,"undefined variable '" + name.writing + "'."));
+    else define(name.writing,value);
  }
 }

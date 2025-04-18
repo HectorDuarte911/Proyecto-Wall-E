@@ -1,37 +1,21 @@
-using System.Text.RegularExpressions;
-
-/// <summary>
-/// Inspect the sintasix of a line
-/// </summary>
+namespace WALLE;
 public class Parser
 {
-  /// <summary>
-  /// Error type identificator
-  /// </summary>
   public List<Error> errors{get;private set;}
-  /// <summary>
-  /// tokens inspectid
-  /// </summary>
   private List<Token> tokens;
-  /// <summary>
-  /// current token inspected
-  /// </summary>
   private int current = 0;
   public Parser(List<Token> tokens,List<Error>errors)
   {
     this.tokens = tokens;
     this.errors = errors;
   }
-  /// <summary>
-  /// Ejecute the parsing
-  /// </summary>
-  /// <returns>Expresion parsing</returns>
   public List<Stmt> parse()
   {
     List<Stmt> statementslist = new List<Stmt>();
     while(!EOF())
     {
     statementslist.Add(statement());
+    if(errors.Count > 0)break;
     }
     return statementslist;
   }
@@ -60,10 +44,10 @@ public class Parser
   }
   private Stmt Label(bool flag)
   {
-    if(flag && !LabelSearch())errors.Add(new Error(tokens[current].line,"The label that is reference don't exist"));  
-    Token tag = consume(TokenTypes.LABEL,"Expect a label");
-    if(!flag && (tokens[current + 1].line == tokens[current].line || tokens[current - 1].line == tokens[current].line ))
-    errors.Add (new Error(tokens[current].line,"A label can't be before and expresion or statement in the same line"));
+    if(flag && !LabelSearch())errors.Add(new Error(tokens[current].line,"The label that is reference don't exist"));
+    Token tag = advance();
+    if(!flag && tokens.Count != 1)
+    errors.Add (new Error(tokens[current - 1].line,"A label can't be before an expresion or statement in the same line"));
     return new Label(tag);
   }
   private Expresion assignment()
@@ -74,24 +58,32 @@ public class Parser
     {
       Token assing = tokens[current - 1];
       Expresion value = assignment();
-      if(expresion is Variable variable)
-      {
-        Token? name = variable.name;
-        return new Assign(name! , value);
-      }
+        if(tokens[current -  1].type == TokenTypes.NUMBER)
+        {
+          if(expresion is Variable variable)
+         {
+          Token? name = variable.name;
+          return new Assign(name , value);
+         }
+        }
+          
       errors.Add(new Error(assing.line,"Invalid assignment target"));
     }
-    return expresion;
+    return expresion; 
   }
-  private Expresion or()
+  public Expresion or()
   {
     Expresion expresion = and();
     List<TokenTypes>type = new List<TokenTypes>(){TokenTypes.OR};
     while(match(type))
     {
       Token Operator = tokens[current -1];
+      if(current  != tokens.Count)
+      { 
       Expresion right = and();
       expresion = new Logical(expresion,Operator,right);
+      }
+      else errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
     }
     return expresion;
   }
@@ -102,8 +94,12 @@ public class Parser
     while(match(type))
     {
       Token Operator = tokens[current - 1];
+      if(current  != tokens.Count)
+      {  
       Expresion right  = Equality();
       expresion = new Logical(expresion , Operator,right);
+      }
+      else errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
     }
     return expresion;
   }
@@ -118,8 +114,12 @@ public class Parser
     while (match(types))
     {
       Token Operator = tokens[current - 1];
+      if(current  != tokens.Count)
+      {  
       Expresion right = comparison();
       expresion = new Binary(expresion, Operator, right);
+      }
+      else errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
     }
     return expresion;
   }
@@ -134,9 +134,13 @@ public class Parser
     while (match(types))
     {
       Token Operator = tokens[current - 1];
-      Expresion right = term();
+      if(current  != tokens.Count)
+      {    
+       Expresion right = term();
       expresion = new Binary(expresion, Operator, right);
-    }
+      }
+      else errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
+    }   
     return expresion;
   }
   private Expresion term()
@@ -149,8 +153,12 @@ public class Parser
     while (match(types))
     {
       Token Operator = tokens[current - 1];
+       if(current  != tokens.Count)
+      {    
       Expresion right = factor();
       expresion = new Binary(expresion, Operator, right);
+      }
+      else errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
     }
     return expresion;
   }
@@ -164,8 +172,12 @@ public class Parser
     while (match(types))
     {
       Token Operator = tokens[current - 1];
+       if(current  != tokens.Count)
+      {    
       Expresion right = unary();
       expresion = new Binary(expresion, Operator, right);
+      }
+      else errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
     }
     return expresion;
   }
@@ -173,7 +185,7 @@ public class Parser
   {
     List<TokenTypes> types = new List<TokenTypes>()
     {
-    TokenTypes.BANG,TokenTypes.MINUS,TokenTypes.POW
+    TokenTypes.BANG,TokenTypes.POW
     };
     if (match(types))
     {
@@ -181,44 +193,47 @@ public class Parser
       Expresion right = unary();
       return new Unary(Operator, right);
     }
-    return primary();
+    if(current  != tokens.Count)return primary();
+    errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
+    return new Variable(new Token(TokenTypes.SEMICOLON ," ",null, 0));
+
   }
   private Expresion primary()
   {
-    List<TokenTypes> types = new List<TokenTypes>()
+    List<TokenTypes> types = new List<TokenTypes>(){TokenTypes.STRING,TokenTypes.NUMBER,};
+    if(match(types)) 
     {
-    TokenTypes.STRING,TokenTypes.NUMBER,
-    };
-    if(match(types)) return new Literal(tokens[current - 1].literal);
+      if(tokens[current - 1].type != TokenTypes.STRING)return new Literal(tokens[current - 1].literal);
+    }
     types.Remove(TokenTypes.STRING);types.Remove(TokenTypes.NUMBER);types.Add(TokenTypes.IDENTIFIER);
+    
     if(match(types))return new Variable(tokens[current - 1]);
+
     types.Remove(TokenTypes.IDENTIFIER);types.Add(TokenTypes.LEFT_PAREN);
     if (match(types)){
       Expresion expresion = assignment();
+      if(current > 0)
+      {
+        if(tokens[current-1].type == TokenTypes.LABEL)errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
+      }
+      if(errors.Count == 0 )
+      {
       consume(TokenTypes.RIGHT_PAREN, "Expect ')' after expresion");
       return new Grouping(expresion);
+      }
     }
-    errors.Add(new Error(tokens[current].line, "Expect expresion"));
-    throw new Exception("Espera@");
+    errors.Add(new Error(1, "Expect an expresion"));
+    return new Variable(new Token(TokenTypes.SEMICOLON ," ",null, 0));
   }
- //This is the end of these methods
- /// <summary>
- /// Comprove is the token is of the same type indroduced 
- /// </summary>
- /// <param name="type"></param>
- /// <param name="message">Message that is show if the type is not the same</param>
- /// <returns>throw an error if the type is not the same </returns>
   private Token consume(TokenTypes type, string message)
   {
-    if (check(type)) return advance();
-    errors.Add(new Error (tokens[current].line, message));
-    throw new Exception("Espera");
+    if(current < tokens.Count)
+    {
+      if (check(type)) return advance();
+    }
+    errors.Add(new Error (1, message));
+    return new Token(TokenTypes.SEMICOLON ," ",null, 0);
   }
-    /// <summary>
-  /// See is the token in the current position is one of the types of the list
-  /// </summary>
-  /// <param name="types"></param>
-  /// <returns></returns>
   private bool match(List<TokenTypes> types)
   {
     foreach (TokenTypes type in types)
@@ -231,26 +246,17 @@ public class Parser
     }
     return false;
   }
-  /// <summary>
-  /// Comprove if the current token in the list is a token of the introduced type
-  /// </summary>
-  /// <param name="type"></param>
-  /// <returns></returns>
   private bool check(TokenTypes type)
   {
     if (EOF()) return false;
     return tokens[current].type == type;
   }
-  /// <summary>
-  /// Advance one in the line  
-  /// </summary>
-  /// <returns>The current token before this implementation</returns>
   private Token advance()
   {
     if (!EOF()) current++;
     return tokens[current - 1];
   }
-   private bool EOF()
+  private bool EOF()
   {
     return current >= tokens.Count ;
   }
@@ -261,5 +267,26 @@ public class Parser
       if(new Label(tokens[current]) == label)return true;
     }
     return false;
+  }
+  private bool IsSign(TokenTypes type)
+  {
+    switch(type)
+    {
+      case TokenTypes.PLUS: return true;
+      case TokenTypes.MINUS: return true;
+      case TokenTypes.PRODUCT: return true;
+      case TokenTypes.MODUL: return true;
+      case TokenTypes.DIVIDE: return true;
+      case TokenTypes.LESS_EQUAL: return true;
+      case TokenTypes.LESS: return true;
+      case TokenTypes.GREATER: return true;
+      case TokenTypes.GREATER_EQUAL: return true;
+      case TokenTypes.BANG_EQUAL: return true;
+      default:return false;
+    }
+  }
+  private bool IsBool(TokenTypes type)
+  {
+    return type == TokenTypes.AND || type == TokenTypes.OR;
   }
 }

@@ -1,7 +1,5 @@
 
-using System.Drawing;
-using Spectre.Console;
-
+namespace WALLE;
 public class Canva
 {
 /// <summary>

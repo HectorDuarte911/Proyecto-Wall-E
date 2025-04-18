@@ -1,3 +1,4 @@
+namespace WALLE;
 /// <summary>
 /// Father class of the expresions in the code
 /// </summary>

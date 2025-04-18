@@ -1,3 +1,4 @@
+namespace WALLE;
 /// <summary>
 /// Types of tokens
 /// </summary>

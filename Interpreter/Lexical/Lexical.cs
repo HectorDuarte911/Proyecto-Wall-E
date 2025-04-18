@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+namespace WALLE;
 public class Keywords
 {
 public static readonly Dictionary<string , TokenTypes> keywords ;
@@ -6,31 +8,31 @@ static Keywords(){keywords = new Dictionary<string ,TokenTypes>{{"GoTo", TokenTy
 public class Lexical
 {
   /// <summary>
-    /// Actual line that is ispected
-    /// </summary>
+  /// Actual line that is ispected
+  /// </summary>
   private string source;
   /// <summary>
-    /// Start position of the inspection
-    /// </summary>
+  /// Start position of the inspection
+  /// </summary>
   private int start = 0;
   /// <summary>
-    /// Current postion of the insoection 
-    /// </summary>
+  /// Current postion of the insoection 
+  /// </summary>
   private int current = 0;
   /// <summary>
-    /// Actual line of the inspection
-    /// </summary>
+  /// Actual line of the inspection
+  /// </summary>
   private int line =1;
   /// <summary>
-    /// Colection of tokens in the source
-    /// </summary>
+  /// Colection of tokens in the source
+  /// </summary>
   private List <Token> tokens = new List<Token>();
   public  List<Error> errors {get;private set;}
   public static List<Label> labels = new List<Label>();
   /// <summary>
-    /// Constructor of Lexical
-    /// </summary>
-    /// <param name="source"></param>
+  /// Constructor of Lexical
+  /// </summary>
+  /// <param name="source"></param>
   public Lexical (string source)
   {
     this.source = source;
@@ -59,7 +61,7 @@ public class Lexical
         case '[' : AddToken(TokenTypes.LEFT_BRACE);break;
         case ']' : AddToken(TokenTypes.RIGHT_BRACE);break;
         case '/' : AddToken(TokenTypes.DIVIDE);break;
-        case '|' : current++;if(Match('|'))AddToken(TokenTypes.OR);
+        case '|' : if(Match('|'))AddToken(TokenTypes.OR);
         else errors.Add(new Error(line , "Unexpected character '|' ,maybe you want to use ||"));break;
         case '&' : AddToken(Match('&') ? TokenTypes.AND : TokenTypes.AND);break;
         case '%' : AddToken(TokenTypes.MODUL);break;
@@ -70,8 +72,7 @@ public class Lexical
         case '!' : AddToken(Match('=') ? TokenTypes.BANG_EQUAL : TokenTypes.BANG);break;
         case '>' : AddToken(Match('=') ? TokenTypes.GREATER_EQUAL : TokenTypes.GREATER);break;
         case '<' : AddToken(Match('=') ? TokenTypes.LESS_EQUAL : Match('-') ? TokenTypes.ASSIGNED : TokenTypes.LESS);break;
-        case '=' : if(Match('='))AddToken(TokenTypes.EQUAL_EQUAL);
-        else  errors.Add(new Error(line , "Unexpected character , maybe you mean '==' , '<=' or '>='"));break;
+        case '=' : if(Match('='))AddToken(TokenTypes.EQUAL_EQUAL);else  errors.Add(new Error(line , "Unexpected character , maybe you mean '==' , '<=' or '>='"));break;
         case ' ' :
         case '\r':
         case '\t':break;
@@ -79,15 +80,21 @@ public class Lexical
         case '"':StringRead();break;
         default:
         if(ISDigit(c))NumberRead();
-        else if(c == '_' && current == 1)errors.Add(new Error (line , "The character '_' can't initialisade an expresion or label"));
-        else if(IsAlpha(c))identifier();
+        else if(IsAlpha(c))
+        {
+          if(!IsDeclaration())
+          {
+            current  = start;
+            labelview();
+          } 
+        }
         else errors.Add(new Error(line , "Unexpected character"));
         break;
-    } 
+    }
   }
   private bool IsAlpha(char c)
   {
-    return (c >= 'a' && c <= 'z')|| (c >= 'A' && c <= 'Z') || c == '_';
+    return (c >= 'a' && c <= 'z')|| (c >= 'A' && c <= 'Z') || c == '-';
   }
   private bool IsAlphaNumeric(char c)
   {
@@ -95,14 +102,19 @@ public class Lexical
   }
   private void StringRead()
   {
-    while(LookAfter() != '"' && !EOF())
+    bool flag = false;
+    while(LookAfter() != '"')
     {
-        if(LookAfter() == '\n')line++;
-        Advance();
+      if(EOF())
+      {
+         errors.Add(new Error(line, "Unfinish string detected"));
+         flag = true;
+         break;
+      }
+      Advance();
     }
-    if(EOF())errors.Add(new Error(line, "Unfinish string detected"));
-    Advance();
-    string value = source.Substring(start + 1, current - 2- start);
+    if(!flag)Advance();
+     string value = source.Substring(start + 1, current - 1- start);
     AddTokenHelper(TokenTypes.STRING,value);
   }
   /// <summary>
@@ -120,46 +132,53 @@ public class Lexical
   private void NumberRead()
   {
     while(ISDigit(LookAfter()))Advance();
+    if(current <= source.Length)
+    {
+      if((IsAlpha(LookAfter()) || LookAfter() == '"' ) && LookAfter() != '-')
+      {
+        while(IsAlpha(LookAfter()))Advance();
+        errors.Add(new Error(line,"Unexpected character"));
+      }
+    }
     AddTokenHelper(TokenTypes.NUMBER,source.Substring(start,current-start));
   }
-  private void identifier()
+  private bool IsDeclaration()
   {
-    int actual = current;
-    bool label = false;
-    while(IsAlpha(LookAfter()) && LookAfter() != '_'){
-      if(ISDigit(LookAfter())){
-        label = true;
-        current = actual;
-        labelview();break;
-      }
-      Advance();
-    }
-    if(!label){
-      while(true){
-        if(LookAfter() == '<' && Match('-')){label = true ;break;}
-        else if(LookAfter() != ' ')break;
-        if(EOF())
-        {
-          current = actual;
-          labelview();break;
-        }
-        Advance();
-      }
-      if(label){
-      string text = source.Substring(start , current - start);
-      TokenTypes type = TokenTypes.IDENTIFIER;
-      if(Keywords.keywords.ContainsKey(text))type = Keywords.keywords[text];
-      AddToken(type);
-      }
-    }
+    while(IsAlpha(LookAfter()) && LookAfter() != '-')Advance();
+    string text = source.Substring(start , current - start );
+      if(IsLineUP())return false;
+    if(LookAfter() != '<' && LookAfter() != ' ')return false;
+    tokens.Add(new Token(TokenTypes.IDENTIFIER,text,text,line));
+    return true;
   }
   private void labelview()
   {
+    bool flag = true;
     while(IsAlphaNumeric(LookAfter()))Advance();
-    Console.WriteLine(source.Substring(start , current));
-    string text = source.Substring(start , current);
+    string text = source.Substring(start , current - start);
+    if( tokens.Count != 0 && tokens[tokens.Count - 1].type == TokenTypes.ASSIGNED)
+    {
+      // if()
+      for (int i = 0; i < text.Length; i++)
+      {
+        if(!IsAlpha(text[i]) || text[i] == '-' )
+        {
+           flag =false;
+           break;
+        }
+      }
+      if(flag)AddToken(TokenTypes.IDENTIFIER);
+      else
+      {
+        errors.Add(new Error(line,"Label can't have a value to assing"));
+      }
+    }
+    else
+    {
     AddToken(TokenTypes.LABEL);
     labels.Add(new Label (new Token (TokenTypes.LABEL ,text,null!,line)));
+    }
+   
   }
   /// <summary>
   /// Call the auxiliar to add a neutral token whith no literal
@@ -212,5 +231,14 @@ public class Lexical
   private bool EOF()
   {
     return current >= source.Length ;
+  }
+  private bool IsLineUP()
+  {
+    while(!EOF())
+    {
+      if(LookAfter() != '\n' && LookAfter() != ' ')return false;
+      Advance();
+    }
+    return true;
   }
 }

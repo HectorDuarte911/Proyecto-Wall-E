@@ -1,3 +1,4 @@
+namespace WALLE;
 public class Token
 {
     /// <summary>

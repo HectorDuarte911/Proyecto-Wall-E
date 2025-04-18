@@ -1,3 +1,4 @@
+namespace WALLE;
 public class Walle : Canva
 {
     private static int Colum;
@@ -123,76 +124,5 @@ public class Walle : Canva
             }
         }
     }
-    public static void Fill()
-    {
-        string? colorfill = canvas![Colum, Row];
-        if (colorfill != PincelColor)
-        {
-            bool[,] mask = new bool[canvas.GetLength(0), canvas.GetLength(1)];
-            FillAssistent(mask, colorfill, false);
-            for (int i = 0; i < mask.GetLength(0); i++)
-            {
-                for (int j = 0; j < mask.GetLength(0); j++)
-                {
-                    if (mask[i, j]) canvas[i, j] = PincelColor!;
-                }
-            }
-        }
-    }
-    private static void FillAssistent(bool[,] mask, string? colorfill, bool flag)
-    {
-
-        if (flag || CanFill(mask, colorfill, Colum, Row))
-        {
-            int[] dirx = { 0, 1, 0, -1 };
-            int[] diry = { 1, 0, -1, 0 };
-            for (int i = 0; i < 4; i++)
-            {
-                int newx = Colum + dirx[i];
-                int newy = Row + diry[i];
-                if (!IsOutRange(newx, newy))
-                {
-                    if (canvas![newx, newy] == colorfill)
-                    {
-                        Spawn(newx, newy);
-                        mask[newx, newy] = true;
-                        break;
-                    }
-                }
-            }
-        }
-        else
-        {
-            bool flagfor = false;
-            for (int i = 0; i < mask.GetLength(0); i++)
-            {
-                for (int j = 0; j < mask.GetLength(0); j++)
-                {
-                    if (mask[i, j])
-                    {
-                        if (CanFill(mask, colorfill, i, j))
-                        {
-                            Spawn(i, j);
-                            break;
-                        }
-                    }
-                }
-                if (flagfor) break;
-            }
-            if (flagfor) FillAssistent(mask, colorfill, true);
-        }
-    }
-    private static bool CanFill(bool[,] mask, string? colorfill, int x, int y)
-    {
-        int[] dirx = { 0, 1, 0, -1 };
-        int[] diry = { 1, 0, -1, 0 };
-        for (int i = 0; i < 4; i++)
-        {
-            int newx = Colum + dirx[i];
-            int newy = Row + diry[i];
-            if (canvas![newx, newy] == colorfill && !mask[newx, newy]) return true;
-        }
-        return false;
-    }
-
+    public static void Fill(){}
 }

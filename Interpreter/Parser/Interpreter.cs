@@ -1,3 +1,5 @@
+
+namespace WALLE;
 public class Void{}
 public class Interpreter : Expresion.IVisitor<object>,Stmt.IVisitor<Void>
 {
@@ -10,7 +12,30 @@ public Interpreter(List<Error> errors)
 } 
 public void interpret(List<Stmt>statements, int begin)
 {
-    bool flag =false;
+    bool validline= false;
+    foreach (Stmt statement in statements)
+    {
+     if(statement is Label)
+     {
+        validline = true;
+        break;
+     }
+     if(statement is Expression expresion)
+     {
+        if(expresion.expresion is Assign)
+        {
+         validline = true;
+         break;   
+        }
+     }   
+    }
+    if(!validline)
+    {
+     errors.Add(new Error(1,"Expect a valid statement"));
+    }
+    else
+    {
+        bool flag =false;
     while(begin < statements.Count){
     if(statements[begin] is GoTo ){
     GoTo? aux = statements[begin] as GoTo;
@@ -23,6 +48,7 @@ public void interpret(List<Stmt>statements, int begin)
      begin++;
     }
     if(flag)interpret(statements,begin);
+    }  
  }
 private void execute(Stmt stmt)
 {
@@ -145,10 +171,12 @@ errors.Add(new Error(Operator.line,"Operand must be a number"));
 }
 private void NumberOperands(Token Operator,object left,object right)
 {
- if(left is string leftstring && right is string rightstring)
- {
-    if(int.TryParse(leftstring,out int leftInt) && int.TryParse(rightstring,out int rightInt))return;
- }
-errors.Add(new Error (Operator.line,"Operands must be a numbers"));
+ if(!IsAritmetic(left) && !IsAritmetic(right))errors.Add(new Error (Operator.line,"Operands must be a numbers"));
+}
+private bool IsAritmetic(object expresion)
+{
+   string exp = expresion as string;
+ if(Convert.ToInt32(exp) != null)return true;
+ return false;
 }
 }

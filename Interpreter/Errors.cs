@@ -1,3 +1,4 @@
+namespace WALLE;
 public class Error
 {
     public string Argument { get; private set; }
