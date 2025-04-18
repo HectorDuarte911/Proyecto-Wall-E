@@ -21,9 +21,16 @@ public class Enviroment
  {
     if(values.ContainsKey(name.writing))
     {
-      values[name.writing] = value;
-      return;
+      values[name.writing] = value;return;
     }
     else define(name.writing,value);
+ }
+ //Auxiiar
+ public void GetValues()
+ {
+   foreach(KeyValuePair<string,object> item in values )
+   {
+      Console.WriteLine(item.Value);
+   }
  }
 }

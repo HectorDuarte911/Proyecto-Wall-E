@@ -23,10 +23,34 @@ public class Parser
  {
   List<TokenTypes> matchlist = new List<TokenTypes>(){TokenTypes.GOTO};
   if(match(matchlist))return GoToStatement();
+  else{
   matchlist.Remove(TokenTypes.GOTO);matchlist.Add(TokenTypes.LABEL);
   if(match(matchlist))return Label(false);
-  return expressionStatements();
- }
+  else{
+  matchlist.Remove(TokenTypes.LABEL);matchlist.Add(TokenTypes.SPAWN);
+  if(match(matchlist))return SpawnStatement();
+  else{
+  matchlist.Remove(TokenTypes.SPAWN);matchlist.Add(TokenTypes.SIZE);
+  if(match(matchlist))return SizeStatement();
+  else{
+  matchlist.Remove(TokenTypes.SIZE);matchlist.Add(TokenTypes.COLOR);
+  if(match(matchlist))return ColorStatement();
+  else{
+  matchlist.Remove(TokenTypes.COLOR);matchlist.Add(TokenTypes.DRAWLINE);
+  if(match(matchlist))return DrawLineStatement();  
+  else{
+  matchlist.Remove(TokenTypes.DRAWLINE);matchlist.Add(TokenTypes.DRAWCIRCLE);
+  if(match(matchlist))return DrawCircleStatement();
+  else{
+  matchlist.Remove(TokenTypes.DRAWCIRCLE);matchlist.Add(TokenTypes.DRAWRECTANGLE);
+  if(match(matchlist))return DrawRectangleStatement();  
+  else{
+  matchlist.Remove(TokenTypes.DRAWRECTANGLE);matchlist.Add(TokenTypes.FILL);
+  if(match(matchlist))return FillStatement(); 
+  else return expressionStatements();
+  }}}}}}}}
+  }
+ 
   private Stmt GoToStatement()
   {
     consume(TokenTypes.LEFT_BRACE,"Expected '[' after 'GoTo' .");
@@ -36,6 +60,72 @@ public class Parser
     Expresion condition = assignment();
     consume(TokenTypes.RIGHT_PAREN,"Expected ')' after the condition .");
     return new GoTo(condition,label as Label);
+  }
+  private Stmt SpawnStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'Spaw' ");
+    Literal x = primary() as Literal;
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    Literal y = primary() as Literal;
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new Spawn(x,y);
+  }
+  private Stmt SizeStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'Size' ");
+    Literal size = primary() as Literal;
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new Size(size);
+  }
+  private Stmt ColorStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'Color' ");
+    Literal color = primary() as Literal;
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new Color(color);
+  }
+ private Stmt DrawLineStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'DrawLine' ");
+    object dirx = unary();
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    object diry = unary();
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    Literal distance = primary() as Literal;
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new DrawLine(dirx,diry,distance);
+  }
+  private Stmt DrawCircleStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'DrawCircle' ");
+    object dirx = unary();
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    object diry = unary() ;
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    Literal radius = primary() as Literal;
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new DrawCircle(dirx,diry,radius);
+  }
+  private Stmt DrawRectangleStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'DrawRectangle' ");
+    object dirx = unary();
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    object diry = unary();
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    Literal distance = primary() as Literal;
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    Literal width = primary() as Literal;
+    consume(TokenTypes.COMMA,"Expected ',' between the variables");
+    Literal height = primary() as Literal;
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new DrawRectangle(dirx,diry,distance,width,height);
+  }
+  private Stmt FillStatement()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'Fill' ");
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new Fill();
   }
   private Stmt expressionStatements()
   {
@@ -50,6 +140,18 @@ public class Parser
     errors.Add (new Error(tokens[current - 1].line,"A label can't be before an expresion or statement in the same line"));
     return new Label(tag);
   }
+  private Expresion GetActualX()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'GetACtualX' ");
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new GetActualX();
+  }
+  private Expresion GetActualY()
+  {
+    consume(TokenTypes.LEFT_PAREN,"Expected '(' after a 'GetACtualY' ");
+    consume(TokenTypes.RIGHT_PAREN,"Expected ')' in the end of function");
+    return new GetActualY();
+  }
   private Expresion assignment()
   {
     Expresion expresion = or();
@@ -58,7 +160,7 @@ public class Parser
     {
       Token assing = tokens[current - 1];
       Expresion value = assignment();
-        if(tokens[current -  1].type == TokenTypes.NUMBER)
+        if(tokens[current -  1].type == TokenTypes.NUMBER  || (current > 3 && IsFun(tokens[current -  3])) )
         {
           if(expresion is Variable variable)
          {
@@ -185,7 +287,7 @@ public class Parser
   {
     List<TokenTypes> types = new List<TokenTypes>()
     {
-    TokenTypes.BANG,TokenTypes.POW
+    TokenTypes.BANG,TokenTypes.POW,TokenTypes.MINUS
     };
     if (match(types))
     {
@@ -201,27 +303,31 @@ public class Parser
   private Expresion primary()
   {
     List<TokenTypes> types = new List<TokenTypes>(){TokenTypes.STRING,TokenTypes.NUMBER,};
-    if(match(types)) 
-    {
+    if(match(types)){
       if(tokens[current - 1].type != TokenTypes.STRING)return new Literal(tokens[current - 1].literal);
     }
+    else{
     types.Remove(TokenTypes.STRING);types.Remove(TokenTypes.NUMBER);types.Add(TokenTypes.IDENTIFIER);
-    
     if(match(types))return new Variable(tokens[current - 1]);
-
+    else{
     types.Remove(TokenTypes.IDENTIFIER);types.Add(TokenTypes.LEFT_PAREN);
     if (match(types)){
       Expresion expresion = assignment();
-      if(current > 0)
-      {
+      if(current > 0){
         if(tokens[current-1].type == TokenTypes.LABEL)errors.Add(new Error(tokens[current - 1].line, "Expect an expresion"));
       }
-      if(errors.Count == 0 )
-      {
+      if(errors.Count == 0 ){
       consume(TokenTypes.RIGHT_PAREN, "Expect ')' after expresion");
       return new Grouping(expresion);
       }
     }
+    else{
+    types.Remove(TokenTypes.LEFT_PAREN);types.Add(TokenTypes.GETACTUALX);
+    if(match(types))return GetActualX();
+    else{
+    types.Remove(TokenTypes.LEFT_PAREN);types.Add(TokenTypes.GETACTUALY);
+    if(match(types))return GetActualY();
+    }}}}
     errors.Add(new Error(1, "Expect an expresion"));
     return new Variable(new Token(TokenTypes.SEMICOLON ," ",null, 0));
   }
@@ -289,4 +395,14 @@ public class Parser
   {
     return type == TokenTypes.AND || type == TokenTypes.OR;
   }
+  private bool IsFun(Token token)
+  {
+   switch(token.type)
+   {
+    case TokenTypes.GETACTUALX:
+    case TokenTypes.GETACTUALY:return true;
+    default:
+    return false;
+   }
+  } 
 }

@@ -67,7 +67,7 @@ public class Walle : Canva
         {
             DrawBorder(centerX,centerY,radius,x[i],y[i]);
         }
-        Spawn(centerX,centerY);
+        if(!IsOutRange(centerX,centerY))Spawn(centerX,centerY);
     }
     private static void DrawBorder(int centerX , int centerY , int radius,int dirx,int dirY)
     {
@@ -82,8 +82,11 @@ public class Walle : Canva
         else if(dirY == -1 && dirx ==  1){newY = centerY + radius - 1; newX = centerX + radius / 2 + 1;radius = radius / 2;}
        for(int i = 0 ; i < radius;i++)
         {  
-            newX -= i * dirx;
-            newY -= i * dirY;
+            if(i != 0)
+            {
+            newX -= dirY;
+            newY -= dirx;
+            }
             if(!IsOutRange(newX,newY))
             {
                Spawn(newX,newY);
@@ -103,6 +106,7 @@ public class Walle : Canva
         {
            DrawBorderRect(centerX,centerY,width,height,x[i],y[i]); 
         } 
+         if(!IsOutRange(centerX,centerY))Spawn(centerX,centerY);
     }
     private static void DrawBorderRect(int centerX,int centerY,int width,int height,int dirX , int dirY)
     {
@@ -113,9 +117,12 @@ public class Walle : Canva
         else if(dirY == -1){newY = centerY + height / 2 + 1; newX = centerX - width / 2 - 1;radius = width;}
         
         for(int i = 0 ; i < radius + 1;i++)
-        {  
-            newX += i * -dirX;
-            newY += i * -dirY;
+        {   
+        if(i!=0)
+        {
+        newX -= dirY;
+        newY -= dirX;
+        }
             if(!IsOutRange(newX,newY))
             {
                Spawn(newX,newY);
@@ -124,5 +131,37 @@ public class Walle : Canva
             }
         }
     }
-    public static void Fill(){}
-}
+    public static void Fill()
+    {
+     bool[,] mask = new bool[canvas.GetLength(0),canvas.GetLength(1)];
+     string color = canvas[Colum,Row];
+     mask = FillHelper(mask,Colum,Row,color);
+     for (int i = 0; i < canvas.GetLength(0); i++)
+     {
+        for (int j = 0; j < canvas.GetLength(1); j++)
+        {
+            if(mask[i,j])canvas[i,j] = PincelColor;
+        }
+     }
+    }
+    private static bool[,] FillHelper(bool[,]mask,int col , int row,string color)
+    {
+        mask[col,row] = true;
+        int [] x = {1,0, 0,-1};
+        int [] y = {0,1,-1, 0};
+        for (int i = 0; i < 4 ; i++)
+        {
+            int newcol = col + x[i];
+            int newrow = row + y[i];
+            if(!IsOutRange(newcol,newrow))
+            {
+                if(!mask[newcol,newrow] && canvas[newcol,newrow] == color)
+                {
+                  mask[newcol,newrow] = true;
+                  mask = FillHelper(mask,newcol,newrow,color);
+                }
+            }
+        }
+        return mask;
+    }
+}   

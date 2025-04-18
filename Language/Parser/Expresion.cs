@@ -13,6 +13,8 @@ public interface IVisitor<R>
  public R visitVariable(Variable variable);
  public R visitAssign(Assign assign);
  public R visitLogical(Logical logical);
+ public R VisitGetActualX(GetActualX getaCtualx);
+ public R VisitGetActualY(GetActualY getactualy);
 }
  public abstract R accept<R>(IVisitor <R> visitor);
 }
@@ -122,5 +124,19 @@ public class Logical : Expresion
         this.left =left;
         this.Operator = Operator;
         this.right =right;
+    }
+}
+public class GetActualX : Expresion
+{
+    public override R accept<R>(IVisitor<R> visitor)
+    {
+        return visitor.VisitGetActualX(this);
+    }
+}
+public class GetActualY : Expresion
+{
+    public override R accept<R>(IVisitor<R> visitor)
+    {
+        return visitor.VisitGetActualY(this);
     }
 }

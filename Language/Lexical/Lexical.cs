@@ -82,11 +82,15 @@ public class Lexical
         if(ISDigit(c))NumberRead();
         else if(IsAlpha(c))
         {
+          if(!IsKeyword())
+          {
+            current = start;
           if(!IsDeclaration())
           {
             current  = start;
             labelview();
           } 
+         } 
         }
         else errors.Add(new Error(line , "Unexpected character"));
         break;
@@ -240,5 +244,24 @@ public class Lexical
       Advance();
     }
     return true;
+  }
+  private bool IsKeyword()
+  {
+    while(IsAlpha(LookAfter()) && LookAfter() != '-')Advance();
+    string text = source.Substring(start , current - start);
+    switch (text)
+    {
+      case "GoTo":AddToken(TokenTypes.GOTO);return true;
+      case "Spawn":AddToken(TokenTypes.SPAWN);return true;
+      case "GetActualX":AddToken(TokenTypes.GETACTUALX);return true;
+      case "GetActualY":AddToken(TokenTypes.GETACTUALY);return true;
+      case "Size":AddToken(TokenTypes.SIZE);return true;
+      case "Color":AddToken(TokenTypes.COLOR);return true;
+      case "DrawLine":AddToken(TokenTypes.DRAWLINE);return true;
+      case "DrawCircle":AddToken(TokenTypes.DRAWCIRCLE);return true;
+      case "DrawRectangle":AddToken(TokenTypes.DRAWRECTANGLE);return true;
+      case "Fill":AddToken(TokenTypes.FILL);return true;
+      default:return false;
+    }
   }
 }

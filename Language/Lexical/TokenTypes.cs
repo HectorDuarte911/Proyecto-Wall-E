@@ -13,8 +13,10 @@ public enum TokenTypes
   LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
  //Lierals
  IDENTIFIER, STRING, NUMBER,
- //Funcions keywords
- GOTO,
+ //Funcions void keywords
+ GOTO,SPAWN,SIZE,COLOR,DRAWLINE,DRAWCIRCLE,DRAWRECTANGLE,FILL,
+ //Function value keywords
+ GETACTUALX,GETACTUALY,
  //Label
  LABEL,
 }
