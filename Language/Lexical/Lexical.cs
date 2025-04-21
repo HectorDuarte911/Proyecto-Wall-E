@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 namespace WALLE;
 public class Keywords
 {
@@ -118,7 +117,7 @@ public class Lexical
       Advance();
     }
     if(!flag)Advance();
-     string value = source.Substring(start + 1, current - 1- start);
+     string value = source.Substring(start + 1, current - 2- start);
     AddTokenHelper(TokenTypes.STRING,value);
   }
   /// <summary>
@@ -148,7 +147,7 @@ public class Lexical
   }
   private bool IsDeclaration()
   {
-    while(IsAlpha(LookAfter()) && LookAfter() != '-')Advance();
+    while(IsAlphaNumeric(LookAfter()))Advance();
     string text = source.Substring(start , current - start );
       if(IsLineUP())return false;
     if(LookAfter() != '<' && LookAfter() != ' ')return false;
@@ -162,7 +161,6 @@ public class Lexical
     string text = source.Substring(start , current - start);
     if( tokens.Count != 0 && tokens[tokens.Count - 1].type == TokenTypes.ASSIGNED)
     {
-      // if()
       for (int i = 0; i < text.Length; i++)
       {
         if(!IsAlpha(text[i]) || text[i] == '-' )
@@ -251,6 +249,8 @@ public class Lexical
     string text = source.Substring(start , current - start);
     switch (text)
     {
+      case "true":AddTokenHelper(TokenTypes.TRUE,true);return true;
+      case "false":AddTokenHelper(TokenTypes.FALSE,false);return true;
       case "GoTo":AddToken(TokenTypes.GOTO);return true;
       case "Spawn":AddToken(TokenTypes.SPAWN);return true;
       case "GetActualX":AddToken(TokenTypes.GETACTUALX);return true;
@@ -261,6 +261,11 @@ public class Lexical
       case "DrawCircle":AddToken(TokenTypes.DRAWCIRCLE);return true;
       case "DrawRectangle":AddToken(TokenTypes.DRAWRECTANGLE);return true;
       case "Fill":AddToken(TokenTypes.FILL);return true;
+      case "GetCanvasSize":AddToken(TokenTypes.GETCANVASSIZE);return true;
+      case "IsBrushColor":AddToken(TokenTypes.ISBRUSHCOLOR);return true;
+      case "IsBrushSize":AddToken(TokenTypes.ISBRUSHSIZE);return true;
+      case "GetColorCount":AddToken(TokenTypes.GETCOLORCOUNT);return true;
+      case "IsCanvasColor":AddToken(TokenTypes.ISCANVASCOLOR);return true;
       default:return false;
     }
   }

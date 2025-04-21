@@ -1,7 +1,7 @@
 namespace WALLE;
 using System.Text;
 using Spectre.Console;
-public class Language:Canva
+public class Language:Walle
 {
   private static Interpreter? interpreter;
   /// <summary>
@@ -47,14 +47,13 @@ public class Language:Canva
   /// Comunicate the writing whith the sintaxix and the Lexical
   /// </summary>
   /// <param name="source"></param>
-  
   private static void Run(string source)
   {
-    Canva.InitCanvas();
-    Canva.RedimensionCanvas(20);
-    Walle.Color("Red");
-    Walle.Size(1);
-    Walle.Spawn(10,10);
+    InitCanvas();
+    RedimensionCanvas(20);
+    Color("Red");
+    Size(1);
+    Spawn(10,10);
     Lexical scaner = new Lexical(source);
     List<Token> tokens = scaner.TokensSearch();
     foreach (Token item in tokens)
@@ -89,16 +88,16 @@ public class Language:Canva
     string color = string.Empty;
     for (int i = 0; i < 20; i++){
         for (int j = 0; j < 20; j++){   
-            if(Canva.canvas![j,i] == "Red"){
+            if(canvas![j,i] == "Red"){
                 color += $"[DarkRed]RED[/] ";
             }
-            else if(Canva.canvas![j,i] == "green")color += "[green]GRE[/] ";
+            else if(canvas![j,i] == "green")color += "[green]GRE[/] ";
             else color += "WHT ";
         }
         color += '\n';
     }
     AnsiConsole.Markup(color);
   }
-  // interpreter.enviroment.GetValues();
+  interpreter!.enviroment.GetValues();
   }
 }

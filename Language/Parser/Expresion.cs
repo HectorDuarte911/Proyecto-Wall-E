@@ -15,6 +15,11 @@ public interface IVisitor<R>
  public R visitLogical(Logical logical);
  public R VisitGetActualX(GetActualX getaCtualx);
  public R VisitGetActualY(GetActualY getactualy);
+ public R VisitIsBrushColor(IsBrushColor isbrushcolor);
+ public R VisitIsBrushSize(IsBrushSize isbrushsize);
+ public R VisitGetColorCount(GetColorCount getcolorcount);
+ public R VisitIsCanvasColor(IsCanvasColor iscanvascolor);
+ public R VisitGetCanvasSize(GetCanvasSize getcanvassize);
 }
  public abstract R accept<R>(IVisitor <R> visitor);
 }
@@ -32,9 +37,6 @@ public class Assign : Expresion
         return visitor.visitAssign(this);
     }
 }
-/// <summary>
-/// Represents all the operation between two expresions
-/// </summary>
 public class Binary : Expresion
 {
     public override R accept<R>(IVisitor<R> visitor)
@@ -51,9 +53,6 @@ public class Binary : Expresion
         Operator = operatortoken;
     }
 }
-/// <summary>
-/// Represents the agrouping of an expresion
-/// </summary>
 public class Grouping : Expresion
 {
     public override R accept<R>(IVisitor<R> visitor)
@@ -66,9 +65,6 @@ public class Grouping : Expresion
       this.expresion = expresion;
     }
 }
-/// <summary>
-/// Represent the diferent literals
-/// </summary>
 public class Literal : Expresion
 {
     public override R accept<R>(IVisitor<R> visitor)
@@ -81,9 +77,6 @@ public class Literal : Expresion
         Value = value;
     }
 }
-/// <summary>
-/// Represent all the 
-/// </summary>
 public class Unary : Expresion
 {
     public override R accept<R>(IVisitor<R> visitor)
@@ -138,5 +131,72 @@ public class GetActualY : Expresion
     public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.VisitGetActualY(this);
+    }
+}
+public class IsBrushColor : Expresion
+{
+    public override R accept<R> (IVisitor<R> visitor)
+    {
+        return visitor.VisitIsBrushColor(this);
+    }
+    public Literal color {get;private set;}
+    public IsBrushColor(Literal color)
+    {
+        this.color = color;
+    }
+}
+public class IsBrushSize : Expresion
+{
+    public override R accept<R> (IVisitor<R> visitor)
+    {
+        return visitor.VisitIsBrushSize(this);
+    }
+    public Literal size {get;private set;}
+    public IsBrushSize(Literal size)
+    {
+        this.size = size;
+    }
+}
+public class GetColorCount: Expresion   
+{
+    public override R accept<R> (IVisitor<R> visitor)
+    {
+        return visitor.VisitGetColorCount(this);
+    }
+    public Literal color {get;private set;}
+    public Literal x1 {get;private set;}
+    public Literal y1 {get;private set;}
+    public Literal x2 {get;private set;}
+    public Literal y2 {get;private set;}
+    public GetColorCount(Literal color,Literal x1,Literal y1,Literal x2,Literal y2)
+    {
+        this.color = color;
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+    }
+}
+public class IsCanvasColor : Expresion
+{
+    public override R accept<R> (IVisitor<R> visitor)
+    {
+        return visitor.VisitIsCanvasColor(this);
+    }
+    public Literal color {get;private set;}
+    public Literal vertical {get;private set;}
+    public Literal horizontal {get;private set;}
+    public IsCanvasColor(Literal color,Literal vertical,Literal horizontal)
+    {
+        this.color = color;
+        this.vertical =vertical;
+        this.horizontal = horizontal;
+    }
+}
+public class GetCanvasSize : Expresion
+{
+    public override R accept<R> (IVisitor<R> visitor)
+    {
+        return visitor.VisitGetCanvasSize(this);
     }
 }

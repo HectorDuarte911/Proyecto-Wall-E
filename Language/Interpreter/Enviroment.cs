@@ -11,7 +11,7 @@ public class Enviroment
  {
     if(values.ContainsKey(name.writing))return values[name.writing];
     errors.Add(new Error(name.line,"Undefined variable ' "+ name.writing + " '" ));
-    return null;
+    return null!;
  }
  private void define(string name,object value)
  {

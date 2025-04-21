@@ -133,14 +133,14 @@ public class Walle : Canva
     }
     public static void Fill()
     {
-     bool[,] mask = new bool[canvas.GetLength(0),canvas.GetLength(1)];
+     bool[,] mask = new bool[canvas!.GetLength(0),canvas.GetLength(1)];
      string color = canvas[Colum,Row];
      mask = FillHelper(mask,Colum,Row,color);
      for (int i = 0; i < canvas.GetLength(0); i++)
      {
         for (int j = 0; j < canvas.GetLength(1); j++)
         {
-            if(mask[i,j])canvas[i,j] = PincelColor;
+            if(mask[i,j])canvas[i,j] = PincelColor!;
         }
      }
     }
@@ -155,7 +155,7 @@ public class Walle : Canva
             int newrow = row + y[i];
             if(!IsOutRange(newcol,newrow))
             {
-                if(!mask[newcol,newrow] && canvas[newcol,newrow] == color)
+                if(!mask[newcol,newrow] && canvas![newcol,newrow] == color)
                 {
                   mask[newcol,newrow] = true;
                   mask = FillHelper(mask,newcol,newrow,color);
@@ -164,4 +164,4 @@ public class Walle : Canva
         }
         return mask;
     }
-}   
+    }   

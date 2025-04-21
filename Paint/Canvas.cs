@@ -1,4 +1,3 @@
-using Spectre.Console;
 namespace WALLE;
 public class Canva
 {
@@ -61,4 +60,4 @@ public static void RedimensionCanvas(int dim)
         canvas = NewCanvas!;
     }
 }
-} 
+}
