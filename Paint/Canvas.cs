@@ -42,7 +42,7 @@ private static void InitInWhite(string?[,] WhiteCanvas)
     {
         for (int j = 0; j < WhiteCanvas.GetLength(0); j++)
         {
-            WhiteCanvas[i,j] = "White";
+            WhiteCanvas[i,j] = "Transparent";
         }
         }
     }

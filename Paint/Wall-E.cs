@@ -42,7 +42,7 @@ public class Walle : Canva
     }
     private static void DrawSquare(int dirX, int dirY,int distance)
     {
-        if(distance != 0)
+        if(distance != 0 && PincelColor != "Transparent")
         {
         int radius = PincelSize / 2; 
         for(int i = Colum - radius ; i <= Colum + radius ;i++)
