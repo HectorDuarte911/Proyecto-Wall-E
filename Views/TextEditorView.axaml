@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:PixelWallE.ViewModels"
+             xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
+             xmlns:aeEdit="clr-namespace:AvaloniaEdit.Editing;assembly=AvaloniaEdit" 
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+             x:Class="PixelWallE.Views.TextEditorView"
+             x:DataType="vm:TextEditorViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ae|TextEditor /template/ aeEdit|TextArea">
+            <Setter Property="Background" Value="#FF252526"/>
+            <Setter Property="Foreground" Value="#FFDCDCDC"/>
+        </Style>
+    </UserControl.Styles>
+    <ae:TextEditor Name="CodeEditor"
+                   Document="{Binding Document}"
+                   SyntaxHighlighting="C#"
+                   FontFamily="Cascadia Code, Consolas, Menlo, monospace"
+                   FontSize="14"
+                   ShowLineNumbers="True"/>
+</UserControl>

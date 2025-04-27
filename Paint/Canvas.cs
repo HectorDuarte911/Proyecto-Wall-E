@@ -2,8 +2,8 @@ namespace WALLE;
 public class Canva
 {
 /// <summary>
-    /// Canvas  panel to save the actual colors in the diferents positions
-    /// </summary>
+/// Canvas  panel to save the actual colors in the diferents positions
+/// </summary>
 protected static string [,]? canvas ;
 public static bool IsOutRange(int x, int y)
 {
@@ -46,18 +46,22 @@ private static void InitInWhite(string?[,] WhiteCanvas)
         }
         }
     }
-public static void RedimensionCanvas(int dim)
-{
-    string?[,] NewCanvas = new string[dim, dim];
-    InitInWhite(NewCanvas);
-    int MinDim = Math.Min(dim, canvas!.GetLength(0));
-    for (int i = 0; i < MinDim; i++)
+    public static void RedimensionCanvas(int dim)
     {
-        for (int j = 0; j < MinDim; j++)
+        string?[,] NewCanvas = new string[dim, dim];
+        InitInWhite(NewCanvas);
+        int MinDim = Math.Min(dim, canvas!.GetLength(0));
+        for (int i = 0; i < MinDim; i++)
         {
-            NewCanvas[i, j] = canvas[i, j];
+            for (int j = 0; j < MinDim; j++)
+            {
+                NewCanvas[i, j] = canvas[i, j];
+            }
         }
         canvas = NewCanvas!;
     }
-}
+ public static string GetCellColor(int x, int y)
+    {
+        return canvas[x, y];
+    }
 }

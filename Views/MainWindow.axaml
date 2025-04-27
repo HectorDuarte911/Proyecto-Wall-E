@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ae="using:AvaloniaEdit"
+    xmlns:vm="clr-namespace:PixelWallE.ViewModels"  
+    xmlns:views="clr-namespace:PixelWallE.Views"
+    mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="700"
+    x:Class="PixelWallE.MainWindow" 
+    x:DataType="vm:MainWindowViewModel"
+    Icon="/Assets/avalonia-logo.ico"
+    Title="PixelWallE">
+   <Grid ColumnDefinitions="2*, Auto, *" Margin="5">
+        <views:DrawCanvasView Grid.Column="0"
+                                 DataContext="{Binding CanvasViewModel}" /> 
+        <GridSplitter Grid.Column="1"
+                      Width="5"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Stretch"
+                      Background="Black"
+                      ResizeBehavior="PreviousAndNext"/>
+                <Grid Grid.Column="2" RowDefinitions="*, Auto, Auto, Auto"> 
+            <views:TextEditorView Grid.Row="0"
+                                  DataContext="{Binding EditorViewModel}"/>
+            <GridSplitter Grid.Row="1"
+                          Height="5"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Center"
+                          Background="Black"
+                          ResizeBehavior="PreviousAndNext"/>
+            <Button Grid.Row="2"
+                    Content="Ejecute"
+                    Command="{Binding RunScriptCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="5"/>
+            <Border Grid.Row="3"
+                    Background="#FF333333"
+                    BorderBrush="DarkGray"
+                    BorderThickness="1"
+                    MinHeight="100"
+                    MaxHeight="200"
+                    Margin="5">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock Text="{Binding CompilerOutput}"
+                               Foreground="LightGray"
+                               Margin="5"
+                               TextWrapping="Wrap"/>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
+

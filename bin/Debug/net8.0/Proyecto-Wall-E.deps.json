@@ -8,12 +8,14 @@
     ".NETCoreApp,Version=v8.0": {
       "Proyecto-Wall-E/1.0.0": {
         "dependencies": {
+          "Avalonia.Templates": "11.2.7",
           "Spectre.Console": "0.49.1"
         },
         "runtime": {
           "Proyecto-Wall-E.dll": {}
         }
       },
+      "Avalonia.Templates/11.2.7": {},
       "Spectre.Console/0.49.1": {
         "runtime": {
           "lib/net8.0/Spectre.Console.dll": {
@@ -29,6 +31,13 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "Avalonia.Templates/11.2.7": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-l0YzyEeXSC2IfC4raWrucmLfeiF8sjMwHNrltDsqeF3BntoMh+qjWwSDzDMYCWL+PtwRhtX6ha0r+GaLAjA6qQ==",
+      "path": "avalonia.templates/11.2.7",
+      "hashPath": "avalonia.templates.11.2.7.nupkg.sha512"
     },
     "Spectre.Console/0.49.1": {
       "type": "package",

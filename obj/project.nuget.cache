@@ -1,17 +1,40 @@
 {
   "version": 2,
-  "dgSpecHash": "EC85wFGaukY=",
+  "dgSpecHash": "sgZStLaodq8=",
   "success": true,
-  "projectFilePath": "C:\\Users\\dania\\Documents\\ProgramProject\\Proyectos\\Proyecto-Wall-E\\Proyecto-Wall-E.csproj",
+  "projectFilePath": "C:\\Users\\dania\\OneDrive\\文档\\ProgramProject\\Proyectos\\PixelWallE\\PixelWallE.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\dania\\.nuget\\packages\\spectre.console\\0.49.1\\spectre.console.0.49.1.nupkg.sha512"
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia\\11.2.7\\avalonia.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.angle.windows.natives\\2.1.22045.20230930\\avalonia.angle.windows.natives.2.1.22045.20230930.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.avaloniaedit\\11.2.0\\avalonia.avaloniaedit.11.2.0.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.buildservices\\0.0.31\\avalonia.buildservices.0.0.31.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.controls.colorpicker\\11.2.7\\avalonia.controls.colorpicker.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.controls.datagrid\\11.2.7\\avalonia.controls.datagrid.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.desktop\\11.2.7\\avalonia.desktop.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.diagnostics\\11.2.7\\avalonia.diagnostics.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.fonts.inter\\11.2.7\\avalonia.fonts.inter.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.freedesktop\\11.2.7\\avalonia.freedesktop.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.native\\11.2.7\\avalonia.native.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.remote.protocol\\11.2.7\\avalonia.remote.protocol.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.skia\\11.2.7\\avalonia.skia.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.themes.fluent\\11.2.7\\avalonia.themes.fluent.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.themes.simple\\11.2.7\\avalonia.themes.simple.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.win32\\11.2.7\\avalonia.win32.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\avalonia.x11\\11.2.7\\avalonia.x11.11.2.7.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\communitytoolkit.mvvm\\8.2.2\\communitytoolkit.mvvm.8.2.2.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\harfbuzzsharp\\7.3.0.3\\harfbuzzsharp.7.3.0.3.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\harfbuzzsharp.nativeassets.linux\\7.3.0.3\\harfbuzzsharp.nativeassets.linux.7.3.0.3.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\harfbuzzsharp.nativeassets.macos\\7.3.0.3\\harfbuzzsharp.nativeassets.macos.7.3.0.3.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\harfbuzzsharp.nativeassets.webassembly\\7.3.0.3\\harfbuzzsharp.nativeassets.webassembly.7.3.0.3.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\harfbuzzsharp.nativeassets.win32\\7.3.0.3\\harfbuzzsharp.nativeassets.win32.7.3.0.3.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\microcom.runtime\\0.11.0\\microcom.runtime.0.11.0.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\skiasharp\\2.88.9\\skiasharp.2.88.9.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\skiasharp.nativeassets.linux\\2.88.9\\skiasharp.nativeassets.linux.2.88.9.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\skiasharp.nativeassets.macos\\2.88.9\\skiasharp.nativeassets.macos.2.88.9.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\skiasharp.nativeassets.webassembly\\2.88.9\\skiasharp.nativeassets.webassembly.2.88.9.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\skiasharp.nativeassets.win32\\2.88.9\\skiasharp.nativeassets.win32.2.88.9.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\system.io.pipelines\\8.0.0\\system.io.pipelines.8.0.0.nupkg.sha512",
+    "C:\\Users\\dania\\.nuget\\packages\\tmds.dbus.protocol\\0.20.0\\tmds.dbus.protocol.0.20.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1900",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "Error al obtener los datos de vulnerabilidad del paquete: No se puede cargar el índice de servicio del origen https://api.nuget.org/v3/index.json."
-    }
-  ]
+  "logs": []
 }
