@@ -21,7 +21,7 @@ public interface IVisitor<R>
  public R VisitIsCanvasColor(IsCanvasColor iscanvascolor);
  public R VisitGetCanvasSize(GetCanvasSize getcanvassize);
 }
- public abstract R accept<R>(IVisitor <R> visitor);
+public abstract R accept<R>(IVisitor <R> visitor);
 }
 public class Assign : Expresion
 {

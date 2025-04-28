@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using System.Text;
 using WALLE;
 namespace PixelWallE.ViewModels;
-
 public partial class MainWindowViewModel : ObservableObject
 {
     [ObservableProperty]
@@ -28,16 +27,11 @@ public partial class MainWindowViewModel : ObservableObject
         string codeToExecute = EditorViewModel.Document.Text;
         CompilerOutput = "Compilando y ejecutando...";
         List<Error> errors = new List<Error>();
-        Lexical.labels.Clear(); // Clear labels from previous runs
-
-        // Clear the canvas for a fresh run (optional, depends on desired behavior)
-        // You might want to keep the state or reset it. Resetting is often clearer.
         Canva.InitCanvas(); // Reinitialize to default size/state
         Canva.RedimensionCanvas(CanvasViewModel.CanvasDimension); // Apply current UI dimension
         Walle.Spawn(CanvasViewModel.CanvasDimension / 2, CanvasViewModel.CanvasDimension / 2); // Reset Walle position
         Walle.Color("Transparent"); // Reset color
         Walle.Size(1);       // Reset size
-
         try
         {
             Lexical lexer = new Lexical(codeToExecute);
@@ -66,10 +60,8 @@ public partial class MainWindowViewModel : ObservableObject
                  CanvasViewModel.SignalCanvasUpdate();
                  return;
             }
-
-
             Parser parser = new Parser(tokens, errors);
-            List<Stmt> statements = parser.parse();
+            List<Stmt> statements = parser.Parse();
             errors.AddRange(parser.errors);
             if (errors.Count > 0)
             {
@@ -79,13 +71,11 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             Interpreter interpreter = new Interpreter(errors);
-            interpreter.interpret(statements, 0); // Start interpretation from the beginning
+            interpreter.interpret(statements);
             errors.AddRange(interpreter.errors);
-
             if (errors.Count > 0)
             {
                 ShowErrors(errors);
-                // Even with interpreter errors, we might want to show the partial result
                 CanvasViewModel.SignalCanvasUpdate(); // <-- UPDATE UI EVEN WITH RUNTIME ERRORS
             }
             else
@@ -107,7 +97,7 @@ public partial class MainWindowViewModel : ObservableObject
         errorBuilder.AppendLine("Errores encontrados:");
         foreach (var error in errors)
         {
-            errorBuilder.AppendLine($"- Línea {error.Location}: {error.Argument}");
+            errorBuilder.AppendLine($"- Line {error.Location}: {error.Argument}");
         }
         CompilerOutput = errorBuilder.ToString();
     }
