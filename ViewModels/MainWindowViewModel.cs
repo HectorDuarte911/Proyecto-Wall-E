@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.Text;
 using WALLE;
 namespace PixelWallE.ViewModels;
+
 public partial class MainWindowViewModel : ObservableObject
 {
     [ObservableProperty]
@@ -43,22 +44,17 @@ public partial class MainWindowViewModel : ObservableObject
                 CompilerOutput += "\nEjecución cancelada debido a errores léxicos.";
                 return;
             }
-
-            // Check if tokens were generated
             if (tokens.Count == 0 && !string.IsNullOrWhiteSpace(codeToExecute))
             {
-                 // If there's code but no tokens, likely only whitespace/comments
-                 CompilerOutput = "No se encontraron comandos ejecutables.";
-                 // Optionally trigger a redraw to show the cleared canvas
-                 CanvasViewModel.SignalCanvasUpdate();
-                 return;
+                CompilerOutput = "No se encontraron comandos ejecutables.";
+                CanvasViewModel.SignalCanvasUpdate();
+                return;
             }
             else if (tokens.Count == 0)
             {
-                 CompilerOutput = "Editor vacío. No hay nada que ejecutar.";
-                 // Optionally trigger a redraw to show the cleared canvas
-                 CanvasViewModel.SignalCanvasUpdate();
-                 return;
+                CompilerOutput = "Editor vacío. No hay nada que ejecutar.";
+                CanvasViewModel.SignalCanvasUpdate();
+                return;
             }
             Parser parser = new Parser(tokens, errors);
             List<Stmt> statements = parser.Parse();
@@ -66,7 +62,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (errors.Count > 0)
             {
                 ShowErrors(errors);
-                 CompilerOutput += "\nEjecución cancelada debido a errores de sintaxis.";
+                CompilerOutput += "\nEjecución cancelada debido a errores de sintaxis.";
                 return;
             }
 
@@ -76,7 +72,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (errors.Count > 0)
             {
                 ShowErrors(errors);
-                CanvasViewModel.SignalCanvasUpdate(); // <-- UPDATE UI EVEN WITH RUNTIME ERRORS
+                CanvasViewModel.SignalCanvasUpdate();
             }
             else
             {
@@ -87,18 +83,30 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             CompilerOutput = $"Error inesperado durante la ejecución:\n{ex.Message}\n{ex.StackTrace}";
-            // Attempt to update the canvas view even if an unexpected error occurred
-             CanvasViewModel.SignalCanvasUpdate();
+            CanvasViewModel.SignalCanvasUpdate();
         }
     }
     private void ShowErrors(List<Error> errors)
     {
         StringBuilder errorBuilder = new StringBuilder();
+        List<Error> Doing = new List<Error>();
         errorBuilder.AppendLine("Errores encontrados:");
         foreach (var error in errors)
         {
+            if (NoShowErrors(Doing, error))
+            {
             errorBuilder.AppendLine($"- Line {error.Location}: {error.Argument}");
+            Doing.Add(error);
+            }
         }
         CompilerOutput = errorBuilder.ToString();
+    }
+    private bool NoShowErrors(List<Error> errors, Error error)
+    {
+        foreach (var er in errors)
+        {
+            if (er == error) return false;
+        }
+        return true;
     }
 }

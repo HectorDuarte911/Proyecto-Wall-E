@@ -60,9 +60,9 @@ public class Spawn : Stmt
   {
     return visitor.VisitSpawnStmt(this);
   }
-  public Literal x {get;private set;}
-  public Literal y {get;private set;}
-  public Spawn(Literal x , Literal y)
+  public Expresion x {get;private set;}
+  public Expresion y {get;private set;}
+  public Spawn(Expresion x , Expresion y)
   {
     this.x = x;
     this.y = y;
@@ -74,8 +74,8 @@ public class Size : Stmt
     {
         return visitor.VisitSizeStmt(this);
     }
-    public Literal number {get;private set;}
-    public Size(Literal number)
+    public Expresion number {get;private set;}
+    public Size(Expresion number)
     {
        this.number = number;
     }
@@ -86,8 +86,8 @@ public class Color : Stmt
     {
         return visitor.VisitColorStmt(this);
     }
-    public Literal color {get;private set;}
-    public Color(Literal color)
+    public Expresion color {get;private set;}
+    public Color(Expresion color)
     {
         this.color = color;
     }
@@ -98,10 +98,10 @@ public class DrawLine : Stmt
     {
         return visitor.VisitDrawLineStmt(this);
     }
-    public object dirx {get;private set;}
-    public object diry {get;private set;}
-    public Literal distance {get;private set;}
-    public DrawLine(object dirx, object diry , Literal distance)
+    public Expresion dirx {get;private set;}
+    public Expresion diry {get;private set;}
+    public Expresion distance {get;private set;}
+    public DrawLine(Expresion dirx, Expresion diry , Expresion distance)
     {
         this.dirx = dirx;
         this.diry = diry;
@@ -114,10 +114,10 @@ public class DrawCircle : Stmt
     {
         return visitor.VisitDrawCircleStmt(this);
     }
-    public object dirx {get;private set;}
-    public object diry {get;private set;}
-    public Literal radius {get;private set;}
-    public DrawCircle(object dirx, object diry , Literal radius)
+    public Expresion dirx {get;private set;}
+    public Expresion diry {get;private set;}
+    public Expresion radius {get;private set;}
+    public DrawCircle(Expresion dirx, Expresion diry , Expresion radius)
     {
         this.dirx = dirx;
         this.diry = diry;
@@ -130,12 +130,12 @@ public class DrawRectangle : Stmt
     {
         return visitor.VisitDrawRectangleStmt(this);
     }
-    public object dirx {get;private set;}
-    public object diry {get;private set;}
-    public Literal distance {get;private set;}
-    public Literal width {get;private set;}
-    public Literal height {get;private set;}
-    public DrawRectangle(object dirx , object diry , Literal distance , Literal width , Literal height)
+    public Expresion dirx {get;private set;}
+    public Expresion diry {get;private set;}
+    public Expresion distance {get;private set;}
+    public Expresion width {get;private set;}
+    public Expresion height {get;private set;}
+    public DrawRectangle(Expresion dirx , Expresion diry , Expresion distance , Expresion width , Expresion height)
     {
         this.dirx = dirx;
         this.diry = diry;

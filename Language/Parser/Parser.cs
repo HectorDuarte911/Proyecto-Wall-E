@@ -29,10 +29,11 @@ public class Parser
       {
         Synchronize();
       }
-      if (errors.Count > 10) {
-          errors.Add(new Error(Peek()?.line ?? 0, "Too many errors. Parsing aborted."));
-          break;
-       }
+      if (errors.Count > 10)
+      {
+        errors.Add(new Error(Peek()?.line ?? 0, "Too many errors. Parsing aborted."));
+        break;
+      }
     }
     return statementslist;
   }
@@ -41,14 +42,14 @@ public class Parser
   {
     if (Check(TokenTypes.IDENTIFIER))
     {
-    Token potentialLabelToken = Peek()!;
-    Token? nextToken = PeekNext();
-    if (nextToken == null || nextToken.line > potentialLabelToken.line)
-    {
+      Token potentialLabelToken = Peek()!;
+      Token? nextToken = PeekNext();
+      if (nextToken == null || nextToken.line > potentialLabelToken.line)
+      {
         return LabelDefinition();
+      }
     }
-   }
-   return Statement();
+    return Statement();
   }
   private Stmt Statement()
   {
@@ -78,83 +79,83 @@ public class Parser
     return new Label(tag);
   }
   private Stmt LabelReferenceOrError()
-   {
-     Token labelToken = Previous();
-     Error(labelToken, "Invalid label usage or definition placement. Labels must be defined alone on their line.");
-     return new Expression(new Literal($"INVALID_LABEL_PLACEMENT:{labelToken.writing}"));
-   }
+  {
+    Token labelToken = Previous();
+    Error(labelToken, "Invalid label usage or definition placement. Labels must be defined alone on their line.");
+    return new Expression(new Literal($"INVALID_LABEL_PLACEMENT:{labelToken.writing}"));
+  }
   private Stmt GoToStatement(Token startToken)
   {
-      Token leftBrace = consumeSameLine(TokenTypes.LEFT_BRACE, "after 'GoTo'", startToken.line);
-      if (!Check(TokenTypes.LABEL))
-      {
-          throw Error(Peek() ?? leftBrace, "Expected label name inside '[' ']'.");
-      }
-      Token labelToken = Advance();
-      Stmt labelRef = new Label(labelToken);
-      Token rightBrace = consumeSameLine(TokenTypes.RIGHT_BRACE, "after the label name in 'GoTo'", startToken.line);
-      Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after ']'", startToken.line);
-      Expresion condition = Expression();
-      Token rightParen = consumeSameLine(TokenTypes.RIGHT_PAREN, "after the condition in 'GoTo'", startToken.line);
-      return new GoTo(condition, labelRef as Label);
+    Token leftBrace = consumeSameLine(TokenTypes.LEFT_BRACE, "after 'GoTo'", startToken.line);
+    if (!Check(TokenTypes.LABEL))
+    {
+      throw Error(Peek() ?? leftBrace, "Expected label name inside '[' ']'.");
+    }
+    Token labelToken = Advance();
+    Stmt labelRef = new Label(labelToken);
+    Token rightBrace = consumeSameLine(TokenTypes.RIGHT_BRACE, "after the label name in 'GoTo'", startToken.line);
+    Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after ']'", startToken.line);
+    Expresion condition = Expression();
+    Token rightParen = consumeSameLine(TokenTypes.RIGHT_PAREN, "after the condition in 'GoTo'", startToken.line);
+    return new GoTo(condition, labelRef as Label);
   }
   private Stmt SpawnStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'Spawn'", startToken.line);
-    Literal x = ParseArgumentAsLiteralSameLine("Spawn X", leftParen.line);
+    Expresion x = ParseArgumentExpressionSameLine("Spawn X", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal y = ParseArgumentAsLiteralSameLine("Spawn Y", leftParen.line);
+    Expresion y = ParseArgumentExpressionSameLine("Spawn Y", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new Spawn(x, y);
   }
   private Stmt SizeStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'Size'", startToken.line);
-    Literal size = ParseArgumentAsLiteralSameLine("Size", leftParen.line);
+    Expresion size = ParseArgumentExpressionSameLine("Size", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new Size(size);
   }
   private Stmt ColorStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'Color'", startToken.line);
-    Literal color = ParseArgumentAsStringLiteralSameLine("Color", leftParen.line);
+    Expresion color = ParseArgumentExpressionSameLine("Color", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new Color(color);
   }
   private Stmt DrawLineStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'DrawLine'", startToken.line);
-    object dirx = ParseDrawArgumentSameLine("DrawLine direction X", leftParen.line);
+    Expresion dirx = ParseDrawArgumentSameLine("DrawLine direction X", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    object diry = ParseDrawArgumentSameLine("DrawLine direction Y", leftParen.line);
+    Expresion diry = ParseDrawArgumentSameLine("DrawLine direction Y", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal distance = ParseArgumentAsIntLiteralSameLine("DrawLine distance", leftParen.line);
+    Expresion distance = ParseArgumentExpressionSameLine("DrawLine distance", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new DrawLine(dirx, diry, distance);
   }
   private Stmt DrawCircleStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'DrawCircle'", startToken.line);
-    object dirx = ParseDrawArgumentSameLine("DrawCircle center offset X", leftParen.line);
+    Expresion dirx = ParseDrawArgumentSameLine("DrawCircle center offset X", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    object diry = ParseDrawArgumentSameLine("DrawCircle center offset Y", leftParen.line);
+    Expresion diry = ParseDrawArgumentSameLine("DrawCircle center offset Y", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal radius = ParseArgumentAsIntLiteralSameLine("DrawCircle radius", leftParen.line);
+    Expresion radius = ParseArgumentExpressionSameLine("DrawCircle radius", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new DrawCircle(dirx, diry, radius);
   }
   private Stmt DrawRectangleStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'DrawRectangle'", startToken.line);
-    object dirx = ParseDrawArgumentSameLine("DrawRectangle corner offset X", leftParen.line);
+    Expresion dirx = ParseDrawArgumentSameLine("DrawRectangle corner offset X", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    object diry = ParseDrawArgumentSameLine("DrawRectangle corner offset Y", leftParen.line);
+    Expresion diry = ParseDrawArgumentSameLine("DrawRectangle corner offset Y", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal distance = ParseArgumentAsIntLiteralSameLine("DrawRectangle distance", leftParen.line);
+    Expresion distance = ParseArgumentExpressionSameLine("DrawRectangle distance", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal width = ParseArgumentAsIntLiteralSameLine("DrawRectangle width", leftParen.line);
+    Expresion width = ParseArgumentExpressionSameLine("DrawRectangle width", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal height = ParseArgumentAsIntLiteralSameLine("DrawRectangle height", leftParen.line);
+    Expresion height = ParseArgumentExpressionSameLine("DrawRectangle height", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new DrawRectangle(dirx, diry, distance, width, height);
   }
@@ -310,40 +311,40 @@ public class Parser
   private Expresion ParseIsBrushColor(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'IsBrushColor'", startToken.line);
-    Literal color = ParseArgumentAsStringLiteralSameLine("IsBrushColor", leftParen.line);
+    Expresion color = ParseArgumentExpressionSameLine("IsBrushColor", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new IsBrushColor(color);
   }
   private Expresion ParseIsBrushSize(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'IsBrushSize'", startToken.line);
-    Literal size = ParseArgumentAsIntLiteralSameLine("IsBrushSize", leftParen.line);
+    Expresion size = ParseArgumentExpressionSameLine("IsBrushSize", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new IsBrushSize(size);
   }
   private Expresion ParseIsCanvasColor(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'IsCanvasColor'", startToken.line);
-    Literal color = ParseArgumentAsStringLiteralSameLine("IsCanvasColor color", leftParen.line);
+    Expresion color = ParseArgumentExpressionSameLine("IsCanvasColor color", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal vertical = ParseArgumentAsIntLiteralSameLine("IsCanvasColor vertical", leftParen.line);
+    Expresion vertical = ParseArgumentExpressionSameLine("IsCanvasColor vertical", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal horizontal = ParseArgumentAsIntLiteralSameLine("IsCanvasColor horizontal", leftParen.line);
+    Expresion horizontal = ParseArgumentExpressionSameLine("IsCanvasColor horizontal", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new IsCanvasColor(color, vertical, horizontal);
   }
   private Expresion ParseGetColorCount(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'GetColorCount'", startToken.line);
-    Literal color = ParseArgumentAsStringLiteralSameLine("GetColorCount color", leftParen.line);
+    Expresion color = ParseArgumentExpressionSameLine("GetColorCount color", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal x1 = ParseArgumentAsIntLiteralSameLine("GetColorCount x1", leftParen.line);
+    Expresion x1 = ParseArgumentExpressionSameLine("GetColorCount x1", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal y1 = ParseArgumentAsIntLiteralSameLine("GetColorCount y1", leftParen.line);
+    Expresion y1 = ParseArgumentExpressionSameLine("GetColorCount y1", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal x2 = ParseArgumentAsIntLiteralSameLine("GetColorCount x2", leftParen.line);
+    Expresion x2 = ParseArgumentExpressionSameLine("GetColorCount x2", leftParen.line);
     ConsumeCommaSameLine(leftParen.line);
-    Literal y2 = ParseArgumentAsIntLiteralSameLine("GetColorCount y2", leftParen.line);
+    Expresion y2 = ParseArgumentExpressionSameLine("GetColorCount y2", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
     return new GetColorCount(color, x1, y1, x2, y2);
   }
@@ -353,67 +354,33 @@ public class Parser
     ConsumeRightParenSameLine(leftParen.line);
     return new GetCanvasSize();
   }
-  private Literal ParseArgumentAsLiteralSameLine(string context, int expectedLine)
+  private Expresion ParseArgumentExpressionSameLine(string context, int expectedLine)
   {
     CheckLine(context, expectedLine);
-    Expresion argExpr = Expression();
-    if (argExpr is Literal lit)
-    {
-      return lit;
-    }
-    else
-    {
-      throw Error(Previous(), $"Argument for {context} must be a literal (number or string) on line {expectedLine}.");
-    }
+    return Expression();
   }
-  private Literal ParseArgumentAsStringLiteralSameLine(string context, int expectedLine)
-  {
-    CheckLine(context, expectedLine);
-    Expresion argExpr = Expression();
-    if (argExpr is Literal lit && lit.Value is string)
-    {
-      return lit;
-    }
-    else
-    {
-      Token errorToken = (argExpr is Literal) ? Previous() : (Peek() ?? Previous());
-      throw Error(errorToken, $"Argument for {context} must be a string literal (e.g., \"Red\") on line {expectedLine}.");
-    }
-  }
-  private Literal ParseArgumentAsIntLiteralSameLine(string context, int expectedLine)
-  {
-    CheckLine(context, expectedLine);
-    Expresion argExpr = Expression();
-    if (argExpr is Literal lit && lit.Value is string s && int.TryParse(s, out _))
-    {
-      return lit;
-    }
-    else if (argExpr is Literal litNum && (litNum.Value is int || litNum.Value is double))
-    {
-      throw Error(Previous(), $"Argument for {context} must be an integer literal (e.g., '123'), received a non-text number on line {expectedLine}.");
-    }
-    else
-    {
-      throw Error(Previous(), $"Argument for {context} must be an integer literal (e.g., '123') on line {expectedLine}.");
-    }
-  }
-  private object ParseDrawArgumentSameLine(string context, int expectedLine)
+  private Expresion ParseDrawArgumentSameLine(string context, int expectedLine) // Cambiado de object a Expresion
   {
     CheckLine(context, expectedLine);
     if (Match(TokenTypes.MINUS))
     {
       Token minus = Previous();
-      Token number = consumeSameLine(TokenTypes.NUMBER, $"number after '-' in {context}", expectedLine);
-      return new Unary(minus, new Literal(number.literal));
+      Token numberToken = consumeSameLine(TokenTypes.NUMBER, $"number after '-' in {context}", expectedLine);
+      object literalValue = numberToken.literal; // O intenta parsear a int/double si es string
+      if (literalValue is string s && int.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out int d)) literalValue = d;
+      return new Unary(minus, new Literal(literalValue));
     }
     else if (Check(TokenTypes.NUMBER))
     {
-      Token number = consumeSameLine(TokenTypes.NUMBER, $"number for {context}", expectedLine);
-      return new Literal(number.literal);
+      Token numberToken = consumeSameLine(TokenTypes.NUMBER, $"number for {context}", expectedLine);
+      object literalValue = numberToken.literal;
+      if (literalValue is string s && int.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out int d))literalValue = d;
+      return new Literal(literalValue); 
     }
     else
     {
-      throw Error(Peek(), $"Expected number or '-number' for {context} on line {expectedLine}.");
+      Expresion exprArg = Expression();
+      return exprArg;
     }
   }
   private void ConsumeCommaSameLine(int expectedLine)

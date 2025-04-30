@@ -139,8 +139,8 @@ public class IsBrushColor : Expresion
     {
         return visitor.VisitIsBrushColor(this);
     }
-    public Literal color {get;private set;}
-    public IsBrushColor(Literal color)
+    public Expresion color {get;private set;}
+    public IsBrushColor(Expresion color)
     {
         this.color = color;
     }
@@ -151,8 +151,8 @@ public class IsBrushSize : Expresion
     {
         return visitor.VisitIsBrushSize(this);
     }
-    public Literal size {get;private set;}
-    public IsBrushSize(Literal size)
+    public Expresion size {get;private set;}
+    public IsBrushSize(Expresion size)
     {
         this.size = size;
     }
@@ -163,12 +163,12 @@ public class GetColorCount: Expresion
     {
         return visitor.VisitGetColorCount(this);
     }
-    public Literal color {get;private set;}
-    public Literal x1 {get;private set;}
-    public Literal y1 {get;private set;}
-    public Literal x2 {get;private set;}
-    public Literal y2 {get;private set;}
-    public GetColorCount(Literal color,Literal x1,Literal y1,Literal x2,Literal y2)
+    public Expresion color {get;private set;}
+    public Expresion x1 {get;private set;}
+    public Expresion y1 {get;private set;}
+    public Expresion x2 {get;private set;}
+    public Expresion y2 {get;private set;}
+    public GetColorCount(Expresion color,Expresion x1,Expresion y1,Expresion x2,Expresion y2)
     {
         this.color = color;
         this.x1 = x1;
@@ -183,10 +183,10 @@ public class IsCanvasColor : Expresion
     {
         return visitor.VisitIsCanvasColor(this);
     }
-    public Literal color {get;private set;}
-    public Literal vertical {get;private set;}
-    public Literal horizontal {get;private set;}
-    public IsCanvasColor(Literal color,Literal vertical,Literal horizontal)
+    public Expresion color {get;private set;}
+    public Expresion vertical {get;private set;}
+    public Expresion horizontal {get;private set;}
+    public IsCanvasColor(Expresion color,Expresion vertical,Expresion horizontal)
     {
         this.color = color;
         this.vertical =vertical;

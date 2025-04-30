@@ -1,6 +1,5 @@
 
 namespace WALLE;
-
 public class Void { }
 public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<Void>
 {
@@ -27,33 +26,33 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<Void>
         }
       }
     }
-      while (current >= 0 && current < statements.Count)
+    while (current >= 0 && current < statements.Count)
+    {
+      Stmt currentStatement = statements[current];
+      if (currentStatement is GoTo goToStmt)
       {
-        Stmt currentStatement = statements[current];
-        if (currentStatement is GoTo goToStmt)
+        object conditionResult = evaluate(goToStmt.condition);
+        if (IsTrue(conditionResult))
         {
-          object conditionResult = evaluate(goToStmt.condition);
-          if (IsTrue(conditionResult))
+          string targetLabelName = goToStmt.label!.tag.writing;
+          if (labelIndexMap.TryGetValue(targetLabelName, out int targetIndex))
           {
-            string targetLabelName = goToStmt.label!.tag.writing;
-            if (labelIndexMap.TryGetValue(targetLabelName, out int targetIndex))
-            {
-              current = targetIndex;
-              continue;
-            }
-            else
-            {
-              errors.Add(new Error(goToStmt.label!.tag.line, $"Runtime Error: Label '{targetLabelName}' not found."));
-              break;
-            }
+            current = targetIndex;
+            continue;
+          }
+          else
+          {
+            errors.Add(new Error(goToStmt.label!.tag.line, $"Runtime Error: Label '{targetLabelName}' not found."));
+            break;
           }
         }
-        else
-        {
-          execute(currentStatement);
-          if (errors.Count > 0) break;
-        }
-        current++;
+      }
+      else
+      {
+        execute(currentStatement);
+        if (errors.Count > 0) break;
+      }
+      current++;
     }
   }
   private void execute(Stmt stmt)
@@ -75,76 +74,76 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<Void>
   }
   public Void VisitSpawnStmt(Spawn stmt)
   {
-    string? xstr = stmt.x.Value as string;
-    string? ystr = stmt.y.Value as string;
-    int x = Convert.ToInt32(xstr);
-    int y = Convert.ToInt32(ystr);
-    if (Canva.IsOutRange(x, y)) errors.Add(new Error(1, "The position is out the bounds of the canvas"));
+    Token xContext = FindToken(stmt.x) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    Token yContext = FindToken(stmt.y) ?? xContext;
+    if (!TryEvaluateAndConvert<int>(stmt.x, xContext, "Spawn X", out int x) || !TryEvaluateAndConvert<int>(stmt.y, yContext, "Spawn Y", out int y)) return new Void();
+    if (Canva.IsOutRange(x, y)) errors.Add(new Error(xContext.line, $"Runtime Error: Spawn position ({x}, {y}) is out of the canvas bounds."));
     else Walle.Spawn(x, y);
     return new Void();
   }
   public Void VisitSizeStmt(Size stmt)
   {
-    string? sizestring = stmt.number.Value as string;
-    int size = Convert.ToInt32(sizestring);
-    if (size <= 0) errors.Add(new Error(1, "The size of the pincel can't be negative"));
+    Token context = FindToken(stmt.number) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    if (!TryEvaluateAndConvert<int>(stmt.number, context, "Size", out int size)) return new Void();
+    if (size <= 0) errors.Add(new Error(context.line, $"Runtime Error: Size ({size}) must be a positive integer."));
     else Walle.Size(size);
     return new Void();
   }
   public Void VisitColorStmt(Color stmt)
   {
-    string? Color = stmt.color.Value as string;
-    if (!IsValidColor(Color!)) errors.Add(new Error(1, "The word introducted is not a valid color"));
-    else Walle.Color(Color!);
+    Token context = FindToken(stmt.color) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    if (!TryEvaluateAndConvert<string>(stmt.color, context, "Color", out string colorValue)) return new Void();
+    if (!IsValidColor(colorValue)) errors.Add(new Error(context.line, $"Runtime Error: '{colorValue}' is not a valid color name."));
+    else Walle.Color(colorValue);
     return new Void();
   }
   public Void VisitDrawLineStmt(DrawLine stmt)
   {
-    string? dirxstring = NegativeComprove(stmt.dirx);
-    int dirX = Convert.ToInt32(dirxstring);
-    string? dirystring = NegativeComprove(stmt.diry);
-    int dirY = Convert.ToInt32(dirystring);
-    if (!IsValidDir(dirX) || !IsValidDir(dirY)) errors.Add(new Error(1, "The direction introduce is not a valid one , a direction most be one of the number 1,-1 or 0"));
-    else
-    {
-      string? distancestring = stmt.distance.Value as string;
-      int Distance = Convert.ToInt32(distancestring);
-      Walle.DrawLine(dirX, dirY, Distance);
-    }
+    Token dirXContext = FindToken(stmt.dirx as Expresion) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    Token dirYContext = FindToken(stmt.diry as Expresion) ?? dirXContext;
+    Token distContext = FindToken(stmt.distance) ?? dirYContext;
+    if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawLine direction X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
+            !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawLine direction Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
+            !TryEvaluateAndConvert<int>(stmt.distance, distContext, "DrawLine distance", out int distance)) return new Void();
+    Walle.DrawLine(dirX, dirY, distance);
     return new Void();
   }
   public Void VisitDrawCircleStmt(DrawCircle stmt)
   {
-    string? dirxstring = NegativeComprove(stmt.dirx);
-    int dirX = Convert.ToInt32(dirxstring);
-    string? dirystring = NegativeComprove(stmt.diry);
-    int dirY = Convert.ToInt32(dirystring);
-    if (!IsValidDir(dirX) || !IsValidDir(dirY)) errors.Add(new Error(1, "The direction introduce is not a valid one , a direction most be one of the number 1,-1 or 0"));
-    else
+    Token dirXContext = FindToken(stmt.dirx as Expresion) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    Token dirYContext = FindToken(stmt.diry as Expresion) ?? dirXContext;
+    Token radiusContext = FindToken(stmt.radius) ?? dirYContext;
+
+    if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawCircle center offset X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
+        !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawCircle center offset Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
+        !TryEvaluateAndConvert<int>(stmt.radius, radiusContext, "DrawCircle radius", out int radius, r => r > 0, "Radius must be positive")) return new Void();
+    if (radius <= 0)
     {
-      string? radiusstring = stmt.radius.Value as string;
-      int Radius = Convert.ToInt32(radiusstring);
-      Walle.DrawCircle(dirX, dirY, Radius);
+      errors.Add(new Error(radiusContext.line, $"Runtime Error: DrawCircle radius ({radius}) must be positive."));
+      return new Void();
     }
+
+    Walle.DrawCircle(dirX, dirY, radius);
     return new Void();
   }
   public Void VisitDrawRectangleStmt(DrawRectangle stmt)
   {
-    string? dirxstring = NegativeComprove(stmt.dirx);
-    int dirX = Convert.ToInt32(dirxstring);
-    string? dirystring = NegativeComprove(stmt.diry);
-    int dirY = Convert.ToInt32(dirystring);
-    if (!IsValidDir(dirX) || !IsValidDir(dirY)) errors.Add(new Error(1, "The direction introduce is not a valid one , a direction most be one of the number 1,-1 or 0"));
-    else
+    Token dirXContext = FindToken(stmt.dirx as Expresion) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    Token dirYContext = FindToken(stmt.diry as Expresion) ?? dirXContext;
+    Token distContext = FindToken(stmt.distance) ?? dirYContext;
+    Token widthContext = FindToken(stmt.width) ?? distContext;
+    Token heightContext = FindToken(stmt.height) ?? widthContext;
+    if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawRectangle corner offset X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
+        !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawRectangle corner offset Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
+        !TryEvaluateAndConvert<int>(stmt.distance, distContext, "DrawRectangle distance", out int distance) ||
+        !TryEvaluateAndConvert<int>(stmt.width, widthContext, "DrawRectangle width", out int width, w => w > 0, "Width must be positive") ||
+        !TryEvaluateAndConvert<int>(stmt.height, heightContext, "DrawRectangle height", out int height, h => h > 0, "Height must be positive")) return new Void();
+    if (width <= 0 || height <= 0)
     {
-      string? distancestring = stmt.distance.Value as string;
-      int Distance = Convert.ToInt32(distancestring);
-      string? widthstring = stmt.width.Value as string;
-      int Width = Convert.ToInt32(widthstring);
-      string? heightstring = stmt.height.Value as string;
-      int Height = Convert.ToInt32(heightstring);
-      Walle.DrawRectangle(dirX, dirY, Distance, Width, Height);
+      errors.Add(new Error(widthContext.line, $"Runtime Error: DrawRectangle width ({width}) and height ({height}) must be positive."));
+      return new Void();
     }
+    Walle.DrawRectangle(dirX, dirY, distance, width, height);
     return new Void();
   }
   public Void VisitFillStmt(Fill stmt)
@@ -162,68 +161,51 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<Void>
   }
   public object VisitIsBrushColor(IsBrushColor expresion)
   {
-
-    string? color = expresion.color.Value as string;
-    if (IsValidColor(color!)) return Walle.IsBrushColor(color);
-    else
-    {
-      errors.Add(new Error(1, "The word introducted is not a valid color"));
-      return false;
-    }
+    Token context = FindToken(expresion.color) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    if (!TryEvaluateAndConvert<string>(expresion.color, context, "IsBrushColor color", out string colorValue, IsValidColor, $"Value is not a valid color name")) return false;
+    return Walle.IsBrushColor(colorValue);
   }
   public object VisitIsBrushSize(IsBrushSize expresion)
   {
-    string? sizeStr = expresion.size.Value as string;
-    int size = Convert.ToInt32(sizeStr);
-    return Walle.IsBrushSize(size);
+    Token context = FindToken(expresion.size) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    if (!TryEvaluateAndConvert<int>(expresion.size, context, "IsBrushSize size", out int sizeValue, s => s > 0, "Size must be a positive integer")) return false;
+    return Walle.IsBrushSize(sizeValue);
   }
   public object VisitGetColorCount(GetColorCount expresion)
   {
-    string? color = expresion.color.Value as string;
-    if (!IsValidColor(color!))
+    Token colorCtx = FindToken(expresion.color) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    Token x1Ctx = FindToken(expresion.x1) ?? colorCtx;
+    Token y1Ctx = FindToken(expresion.y1) ?? x1Ctx;
+    Token x2Ctx = FindToken(expresion.x2) ?? y1Ctx;
+    Token y2Ctx = FindToken(expresion.y2) ?? x2Ctx;
+    if (!TryEvaluateAndConvert<string>(expresion.color, colorCtx, "GetColorCount color", out string colorValue, IsValidColor, "Invalid color name") ||
+        !TryEvaluateAndConvert<int>(expresion.x1, x1Ctx, "GetColorCount x1", out int x1Value) ||
+        !TryEvaluateAndConvert<int>(expresion.y1, y1Ctx, "GetColorCount y1", out int y1Value) ||
+        !TryEvaluateAndConvert<int>(expresion.x2, x2Ctx, "GetColorCount x2", out int x2Value) ||
+        !TryEvaluateAndConvert<int>(expresion.y2, y2Ctx, "GetColorCount y2", out int y2Value)) return 0;
+    if (Canva.IsOutRange(x1Value, y1Value) || Canva.IsOutRange(x2Value, y2Value))
     {
-      errors.Add(new Error(1, "The word introducted is not a valid color"));
+      errors.Add(new Error(x1Ctx.line, $"Runtime Error: Coordinates provided to GetColorCount are out of canvas bounds."));
       return 0;
     }
-    else
-    {
-      string? x1Str = expresion.x1.Value as string;
-      int x1 = Convert.ToInt32(x1Str);
-      string? y1Str = expresion.y1.Value as string;
-      int y1 = Convert.ToInt32(y1Str);
-      string? x2Str = expresion.x2.Value as string;
-      int x2 = Convert.ToInt32(x2Str);
-      string? y2Str = expresion.y2.Value as string;
-      int y2 = Convert.ToInt32(y2Str);
-      if (Canva.IsOutRange(x1, y1) || Canva.IsOutRange(x2, y2))
-      {
-        errors.Add(new Error(1, "The position indroduce is out of the range of the canvas"));
-        return 0;
-      }
-      return Canva.GetColorCount(color, x1, y1, x2, y2);
-    }
+    return Canva.GetColorCount(colorValue, x1Value, y1Value, x2Value, y2Value);
   }
   public object VisitIsCanvasColor(IsCanvasColor expresion)
   {
-    string? color = expresion.color.Value as string;
-    if (!IsValidColor(color!))
+    Token colorCtx = FindToken(expresion.color) ?? new Token(TokenTypes.IDENTIFIER, "?", null!, 0);
+    Token vertCtx = FindToken(expresion.vertical) ?? colorCtx;
+    Token horzCtx = FindToken(expresion.horizontal) ?? vertCtx;
+    if (!TryEvaluateAndConvert<string>(expresion.color, colorCtx, "IsCanvasColor color", out string colorValue, IsValidColor, "Invalid color name") ||
+        !TryEvaluateAndConvert<int>(expresion.vertical, vertCtx, "IsCanvasColor vertical offset", out int verticalValue) ||
+        !TryEvaluateAndConvert<int>(expresion.horizontal, horzCtx, "IsCanvasColor horizontal offset", out int horizontalValue)) return false;
+    int targetX = Walle.GetActualX() + verticalValue;
+    int targetY = Walle.GetActualY() + horizontalValue;
+    if (Canva.IsOutRange(targetX, targetY))
     {
-      errors.Add(new Error(1, "The word introducted is not a valid color"));
+      errors.Add(new Error(vertCtx.line, $"Runtime Error: Calculated position ({targetX}, {targetY}) for IsCanvasColor is out of canvas bounds."));
       return false;
     }
-    else
-    {
-      string? verticalStr = expresion.vertical.Value as string;
-      int vertical = Convert.ToInt32(verticalStr);
-      string? horizontalStr = expresion.horizontal.Value as string;
-      int horizontal = Convert.ToInt32(horizontalStr);
-      if (Canva.IsOutRange(Walle.GetActualX() + vertical, Walle.GetActualY() + horizontal))
-      {
-        errors.Add(new Error(1, "The position indroduce is out of the range of the canvas"));
-        return false;
-      }
-      return Canva.IsCanvasColor(color, vertical, horizontal);
-    }
+    return Canva.IsCanvasColor(colorValue, verticalValue, horizontalValue);
   }
   public object VisitGetCanvasSize(GetCanvasSize expresion)
   {
@@ -420,5 +402,52 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<Void>
     if (left is bool && right is bool) return true;
     if (left is int && right is int) return true;
     return false;
+  }
+  private bool TryEvaluateAndConvert<T>(Expresion expr, Token contextToken, string argName, out T result, Func<T, bool>? validator = null, string? validationErrorMsg = null)
+  {
+    result = default(T)!;
+    object evaluatedValue = evaluate(expr);
+    int errorLine = contextToken?.line ?? 0;
+    if (evaluatedValue is T typedValue) result = typedValue;
+    else if (typeof(T) == typeof(int))
+    {
+      if (evaluatedValue is string s && int.TryParse(s, out int i)) result = (T)(object)i;
+      else
+      {
+        errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires an integer value, but got '{evaluatedValue?.GetType().Name ?? "null"}'."));
+        return false;
+      }
+    }
+    else if (typeof(T) == typeof(string))
+    {
+      if (evaluatedValue != null) result = (T)(object)evaluatedValue.ToString()!;
+      else
+      {
+        errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires a '{typeof(T).Name}' value, but got null."));
+        return false;
+      }
+    }
+    else
+    {
+      errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires a '{typeof(T).Name}' value, but got '{evaluatedValue?.GetType().Name ?? "null"}'."));
+      return false;
+    }
+    if (validator != null && !validator(result))
+    {
+      string specificError = validationErrorMsg ?? $"Validation failed for argument '{argName}'";
+      errors.Add(new Error(errorLine, $"Runtime Error: {specificError} (Value: '{result}')"));
+      return false;
+    }
+    return true;
+  }
+  private Token? FindToken(Expresion? expr)
+  {
+    if (expr is Binary bin) return bin.Operator ?? FindToken(bin.Leftside);
+    if (expr is Unary un) return un.Operator ?? FindToken(un.Rightside);
+    if (expr is Variable var) return var.name;
+    if (expr is Assign ass) return ass.name ?? FindToken(ass.value);
+    if (expr is Literal lit) return null;
+    if (expr is Logical log) return log.Operator ?? FindToken(log.left);
+    return null;
   }
 }
