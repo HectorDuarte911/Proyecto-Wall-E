@@ -1,7 +1,5 @@
 ﻿using Avalonia;
-using System.Diagnostics;
 namespace PixelWallE;
-
 internal class Program
 {
     public static void Main(string[] args) => BuildAvaloniaApp()

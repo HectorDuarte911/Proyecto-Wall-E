@@ -3,23 +3,18 @@ using CommunityToolkit.Mvvm.Input;
 using System.Text;
 using WALLE;
 namespace PixelWallE.ViewModels;
-
 public partial class MainWindowViewModel : ObservableObject
 {
     [ObservableProperty]
     private DrawCanvasViewModel _canvasViewModel;
-
     [ObservableProperty]
     private TextEditorViewModel _editorViewModel;
-
     [ObservableProperty]
     private string _compilerOutput = "Listo.";
-
     public MainWindowViewModel()
     {
         _canvasViewModel = new DrawCanvasViewModel();
         _editorViewModel = new TextEditorViewModel();
-        // Ensure the ViewModels CanvasDimension matches the backend initially
         _canvasViewModel.CanvasDimension = _canvasViewModel.GetBackendCanvasDimension();
     }
     [RelayCommand]
@@ -28,11 +23,11 @@ public partial class MainWindowViewModel : ObservableObject
         string codeToExecute = EditorViewModel.Document.Text;
         CompilerOutput = "Compilando y ejecutando...";
         List<Error> errors = new List<Error>();
-        Canva.InitCanvas(); // Reinitialize to default size/state
-        Canva.RedimensionCanvas(CanvasViewModel.CanvasDimension); // Apply current UI dimension
-        Walle.Spawn(CanvasViewModel.CanvasDimension / 2, CanvasViewModel.CanvasDimension / 2); // Reset Walle position
-        Walle.Color("Transparent"); // Reset color
-        Walle.Size(1);       // Reset size
+        Canva.InitCanvas();
+        Canva.RedimensionCanvas(CanvasViewModel.CanvasDimension);
+        Walle.Spawn(CanvasViewModel.CanvasDimension / 2, CanvasViewModel.CanvasDimension / 2);
+        Walle.Color("Transparent");
+        Walle.Size(1);
         try
         {
             Lexical lexer = new Lexical(codeToExecute);
@@ -77,7 +72,7 @@ public partial class MainWindowViewModel : ObservableObject
             else
             {
                 CompilerOutput = "Ejecución completada sin errores.";
-                CanvasViewModel.SignalCanvasUpdate(); // <-- UPDATE UI ON SUCCESS
+                CanvasViewModel.SignalCanvasUpdate();
             }
         }
         catch (Exception ex)

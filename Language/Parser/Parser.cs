@@ -1,3 +1,4 @@
+using System.Globalization;
 namespace WALLE;
 
 public class Parser
@@ -17,12 +18,15 @@ public class Parser
     List<Stmt> statementslist = new List<Stmt>();
     while (!IsAtEnd())
     {
+      int lineBeforeStatement = (current > 0) ? tokens[current - 1].line : 1;
+      if (!IsAtEnd() && Peek()!.line > lineBeforeStatement) lineBeforeStatement = Peek()!.line;
       try
       {
         Stmt? statement = DeclarationOrStatement();
         if (statement != null)
         {
           statementslist.Add(statement);
+          CheckForTrailingTokens(statement);
         }
       }
       catch (ParseError)
@@ -31,13 +35,30 @@ public class Parser
       }
       if (errors.Count > 10)
       {
-        errors.Add(new Error(Peek()?.line ?? 0, "Too many errors. Parsing aborted."));
+        int errorLine = Peek()?.line ?? tokens.LastOrDefault()?.line ?? 0;
+        errors.Add(new Error(errorLine, "Too many errors. Parsing aborted."));
         break;
       }
     }
+    CheckLabelReferences(statementslist);
     return statementslist;
   }
   private class ParseError : Exception { }
+  private int GetStatementEndLine(Stmt stmt)
+  {
+    if (current > 0) return Previous().line;
+    if (tokens.Count > 0) return tokens[0].line;
+    return 0;
+  }
+  private void CheckForTrailingTokens(Stmt parsedStatement)
+  {
+    if (!IsAtEnd())
+    {
+      Token lastTokenOfStatement = Previous();
+      Token nextToken = Peek()!;
+      if (nextToken.line == lastTokenOfStatement.line) throw Error(nextToken, "Unexpected token found after the end of a statement on the same line.");
+    }
+  }
   private Stmt? DeclarationOrStatement()
   {
     if (Check(TokenTypes.IDENTIFIER))
@@ -54,7 +75,6 @@ public class Parser
   private Stmt Statement()
   {
     if (Match(TokenTypes.GOTO)) return GoToStatement(Previous());
-    if (Match(TokenTypes.LABEL)) return LabelReferenceOrError();
     if (Match(TokenTypes.SPAWN)) return SpawnStatement(Previous());
     if (Match(TokenTypes.SIZE)) return SizeStatement(Previous());
     if (Match(TokenTypes.COLOR)) return ColorStatement(Previous());
@@ -68,36 +88,36 @@ public class Parser
   {
     Token tag = Consume(TokenTypes.IDENTIFIER, "Expected label name.");
     string labelName = tag.writing;
-    if (definedLabels.ContainsKey(labelName))
-    {
-      Error(tag, $"Label '{labelName}' is already defined on line {definedLabels[labelName].line}.");
-    }
-    else
-    {
-      definedLabels.Add(labelName, tag);
-    }
+    if (definedLabels.ContainsKey(labelName)) Error(tag, $"Label '{labelName}' is already defined on line {definedLabels[labelName].line}.");
+    else definedLabels.Add(labelName, tag);
     return new Label(tag);
   }
   private Stmt LabelReferenceOrError()
   {
-    Token labelToken = Previous();
-    Error(labelToken, "Invalid label usage or definition placement. Labels must be defined alone on their line.");
-    return new Expression(new Literal($"INVALID_LABEL_PLACEMENT:{labelToken.writing}"));
+    Token labelKeywordToken = Previous();
+    throw Error(labelKeywordToken, "The 'LABEL' keyword is reserved and cannot be used directly. Define labels using an identifier alone on a line (e.g., 'myLabelName'), and reference them in GoTo statements (e.g., 'GoTo[myLabelName](...)').");
   }
   private Stmt GoToStatement(Token startToken)
   {
     Token leftBrace = consumeSameLine(TokenTypes.LEFT_BRACE, "after 'GoTo'", startToken.line);
-    if (!Check(TokenTypes.LABEL))
-    {
-      throw Error(Peek() ?? leftBrace, "Expected label name inside '[' ']'.");
-    }
-    Token labelToken = Advance();
-    Stmt labelRef = new Label(labelToken);
+    Token labelIdentifierToken = Consume(TokenTypes.IDENTIFIER, "Expected label name (identifier) inside '[' ']' for 'GoTo'.");
+    Stmt labelRef = new Label(labelIdentifierToken);
     Token rightBrace = consumeSameLine(TokenTypes.RIGHT_BRACE, "after the label name in 'GoTo'", startToken.line);
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after ']'", startToken.line);
     Expresion condition = Expression();
     Token rightParen = consumeSameLine(TokenTypes.RIGHT_PAREN, "after the condition in 'GoTo'", startToken.line);
     return new GoTo(condition, labelRef as Label);
+  }
+  private void CheckLabelReferences(List<Stmt> statements)
+  {
+    foreach (Stmt stmt in statements)
+    {
+      if (stmt is GoTo goToStmt)
+      {
+        string labelName = goToStmt.label!.tag.writing;
+        if (!definedLabels.ContainsKey(labelName)) Error(goToStmt.label.tag, $"Undefined label '{labelName}' referenced in GoTo statement.");
+      }
+    }
   }
   private Stmt SpawnStatement(Token startToken)
   {
@@ -106,21 +126,21 @@ public class Parser
     ConsumeCommaSameLine(leftParen.line);
     Expresion y = ParseArgumentExpressionSameLine("Spawn Y", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new Spawn(x, y);
+    return new Spawn(startToken,x, y);
   }
   private Stmt SizeStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'Size'", startToken.line);
     Expresion size = ParseArgumentExpressionSameLine("Size", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new Size(size);
+    return new Size(startToken,size);
   }
   private Stmt ColorStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'Color'", startToken.line);
     Expresion color = ParseArgumentExpressionSameLine("Color", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new Color(color);
+    return new Color(startToken,color);
   }
   private Stmt DrawLineStatement(Token startToken)
   {
@@ -131,7 +151,7 @@ public class Parser
     ConsumeCommaSameLine(leftParen.line);
     Expresion distance = ParseArgumentExpressionSameLine("DrawLine distance", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new DrawLine(dirx, diry, distance);
+    return new DrawLine(startToken,dirx, diry, distance);
   }
   private Stmt DrawCircleStatement(Token startToken)
   {
@@ -142,7 +162,7 @@ public class Parser
     ConsumeCommaSameLine(leftParen.line);
     Expresion radius = ParseArgumentExpressionSameLine("DrawCircle radius", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new DrawCircle(dirx, diry, radius);
+    return new DrawCircle(startToken,dirx, diry, radius);
   }
   private Stmt DrawRectangleStatement(Token startToken)
   {
@@ -157,17 +177,24 @@ public class Parser
     ConsumeCommaSameLine(leftParen.line);
     Expresion height = ParseArgumentExpressionSameLine("DrawRectangle height", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new DrawRectangle(dirx, diry, distance, width, height);
+    return new DrawRectangle(startToken,dirx, diry, distance, width, height);
   }
   private Stmt FillStatement(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'Fill'", startToken.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new Fill();
+    return new Fill(startToken);
   }
   private Stmt ExpressionStatement()
   {
     Expresion expr = Expression();
+    if (!(expr is Assign))
+    {
+      Token errorToken = FindTokenForExpression(expr) ?? Previous() ?? Peek()!;
+      if (expr is Variable || expr is Literal)
+        throw Error(errorToken, $"Unexpected '{errorToken.writing}'. Variables and literals cannot stand alone as statements. Use assignment '<-' or a command like Spawn, Draw, etc.");
+      else throw Error(errorToken, "This expression cannot stand alone as a statement. Only assignments ('<-') or commands (Spawn, Draw, etc.) are allowed.");
+    }
     return new Expression(expr);
   }
   private Expresion Expression()
@@ -180,15 +207,9 @@ public class Parser
     if (Match(TokenTypes.ASSIGNED))
     {
       Token assignOp = Previous();
-      if (IsAtEnd() || Peek()!.line != assignOp.line)
-      {
-        throw Error(assignOp, "Assignment value must start on the same line as '<-'.");
-      }
+      if (IsAtEnd() || Peek()!.line != assignOp.line) throw Error(assignOp, "Assignment value must start on the same line as '<-'.");
       Expresion value = Assignment();
-      if (expr is Variable variable)
-      {
-        return new Assign(variable.name, value);
-      }
+      if (expr is Variable variable) return new Assign(variable.name, value);
       else
       {
         Error(assignOp, "Invalid assignment target.");
@@ -265,10 +286,17 @@ public class Parser
   }
   private Expresion Unary()
   {
-    if (Match(TokenTypes.BANG, TokenTypes.MINUS, TokenTypes.POW))
+    if (Match(TokenTypes.BANG, TokenTypes.MINUS))
     {
       Token op = Previous();
       Expresion right = Unary();
+      return new Unary(op, right);
+    }
+    if (Match(TokenTypes.POW))
+    {
+      Token op = Previous();
+      Expresion right = Primary();
+      Error(op, "Unary power ' ** ' is not standard. Did you mean multiplication '*' or assignment '<-'?");
       return new Unary(op, right);
     }
     return Primary();
@@ -277,7 +305,6 @@ public class Parser
   {
     if (Match(TokenTypes.FALSE)) return new Literal(false);
     if (Match(TokenTypes.TRUE)) return new Literal(true);
-    if (Match(TokenTypes.NUMBER)) return new Literal(Previous().literal);
     if (Match(TokenTypes.STRING)) return new Literal(Previous().literal);
     if (Match(TokenTypes.IDENTIFIER)) return new Variable(Previous());
     if (Match(TokenTypes.GETACTUALX)) return ParseGetActualX(Previous());
@@ -287,6 +314,16 @@ public class Parser
     if (Match(TokenTypes.ISCANVASCOLOR)) return ParseIsCanvasColor(Previous());
     if (Match(TokenTypes.GETCOLORCOUNT)) return ParseGetColorCount(Previous());
     if (Match(TokenTypes.GETCANVASSIZE)) return ParseGetCanvasSize(Previous());
+    if (Match(TokenTypes.NUMBER))
+    {
+      object literalValue = Previous().literal;
+      if (literalValue is string s && int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue))
+      {
+        return new Literal(intValue);
+      }
+      if (!(literalValue is int)) { }
+      return new Literal(literalValue);
+    }
     if (Match(TokenTypes.LEFT_PAREN))
     {
       Token leftParen = Previous();
@@ -294,33 +331,34 @@ public class Parser
       ConsumeRightParenSameLine(leftParen.line);
       return new Grouping(expr);
     }
-    throw Error(Peek(), "Expected expression.");
+    if (IsAtEnd()) throw Error(Previous(), "Expected expression, found end of file.");
+    else throw Error(Peek(), "Expected expression.");
   }
   private Expresion ParseGetActualX(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'GetActualX'", startToken.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new GetActualX();
+    return new GetActualX(startToken);
   }
   private Expresion ParseGetActualY(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'GetActualY'", startToken.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new GetActualY();
+    return new GetActualY(startToken);
   }
   private Expresion ParseIsBrushColor(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'IsBrushColor'", startToken.line);
     Expresion color = ParseArgumentExpressionSameLine("IsBrushColor", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new IsBrushColor(color);
+    return new IsBrushColor(startToken,color);
   }
   private Expresion ParseIsBrushSize(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'IsBrushSize'", startToken.line);
     Expresion size = ParseArgumentExpressionSameLine("IsBrushSize", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new IsBrushSize(size);
+    return new IsBrushSize(startToken,size);
   }
   private Expresion ParseIsCanvasColor(Token startToken)
   {
@@ -331,7 +369,7 @@ public class Parser
     ConsumeCommaSameLine(leftParen.line);
     Expresion horizontal = ParseArgumentExpressionSameLine("IsCanvasColor horizontal", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new IsCanvasColor(color, vertical, horizontal);
+    return new IsCanvasColor(startToken,color, vertical, horizontal);
   }
   private Expresion ParseGetColorCount(Token startToken)
   {
@@ -346,69 +384,62 @@ public class Parser
     ConsumeCommaSameLine(leftParen.line);
     Expresion y2 = ParseArgumentExpressionSameLine("GetColorCount y2", leftParen.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new GetColorCount(color, x1, y1, x2, y2);
+    return new GetColorCount(startToken,color, x1, y1, x2, y2);
   }
   private Expresion ParseGetCanvasSize(Token startToken)
   {
     Token leftParen = consumeSameLine(TokenTypes.LEFT_PAREN, "after 'GetCanvasSize'", startToken.line);
     ConsumeRightParenSameLine(leftParen.line);
-    return new GetCanvasSize();
+    return new GetCanvasSize(startToken);
   }
   private Expresion ParseArgumentExpressionSameLine(string context, int expectedLine)
   {
-    CheckLine(context, expectedLine);
-    return Expression();
+    CheckLine($"start of argument '{context}'", expectedLine);
+    Expresion arg = Expression();
+    return arg;
   }
-  private Expresion ParseDrawArgumentSameLine(string context, int expectedLine) // Cambiado de object a Expresion
+  private Expresion ParseDrawArgumentSameLine(string context, int expectedLine)
   {
-    CheckLine(context, expectedLine);
+    CheckLine($"start of draw argument '{context}'", expectedLine);
     if (Match(TokenTypes.MINUS))
     {
-      Token minus = Previous();
-      Token numberToken = consumeSameLine(TokenTypes.NUMBER, $"number after '-' in {context}", expectedLine);
-      object literalValue = numberToken.literal; // O intenta parsear a int/double si es string
-      if (literalValue is string s && int.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out int d)) literalValue = d;
-      return new Unary(minus, new Literal(literalValue));
+      Token minusToken = Previous();
+      if (Check(TokenTypes.NUMBER) && Peek()!.line == minusToken.line)
+      {
+        Token numberToken = Advance();
+        object literalValue = numberToken.literal;
+        if (literalValue is string s && int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int val)) return new Literal(-val);
+        else throw Error(numberToken, $"Internal error: Expected number literal after '-' in {context}, got '{literalValue}'.");
+      }
+      else
+      {
+        current--;
+        return Expression();
+      }
     }
-    else if (Check(TokenTypes.NUMBER))
-    {
-      Token numberToken = consumeSameLine(TokenTypes.NUMBER, $"number for {context}", expectedLine);
-      object literalValue = numberToken.literal;
-      if (literalValue is string s && int.TryParse(s, System.Globalization.CultureInfo.InvariantCulture, out int d))literalValue = d;
-      return new Literal(literalValue); 
-    }
-    else
-    {
-      Expresion exprArg = Expression();
-      return exprArg;
-    }
+    else return Expression();
   }
   private void ConsumeCommaSameLine(int expectedLine)
   {
     consumeSameLine(TokenTypes.COMMA, "',' between arguments", expectedLine);
   }
-  private void ConsumeRightParenSameLine(int expectedLine)
+  private void ConsumeRightParenSameLine(int startParenLine)
   {
-    consumeSameLine(TokenTypes.RIGHT_PAREN, "')' at the end of argument list or expression", expectedLine);
+    int expectedLine = Previous().line;
+    consumeSameLine(TokenTypes.RIGHT_PAREN, "')' to close argument list or expression group", expectedLine);
   }
-  private void CheckLine(string context, int expectedLine)
+  private void CheckLine(string contextMsg, int expectedLine)
   {
     if (!IsAtEnd() && Peek()!.line != expectedLine)
-    {
-      throw Error(Peek(), $"Unexpected line break before {context}. Must be on line {expectedLine}.");
-    }
+      throw Error(Peek(), $"Unexpected line break before {contextMsg}. Expected on line {expectedLine}, but found on line {Peek()!.line}.");
   }
   private Token consumeSameLine(TokenTypes type, string contextMsg, int expectedLine)
   {
-    if (!IsAtEnd() && Peek()!.line != expectedLine)
-    {
-      throw Error(Peek(), $"Unexpected line break {contextMsg}. Must be on line {expectedLine}. Found on line {Peek()!.line}");
-    }
-    if (Check(type))
-    {
-      return Advance();
-    }
-    throw Error(Peek(), $"Expected '{type}' {contextMsg}, but got '{Peek()?.writing ?? "EOF"}' on line {expectedLine}.");
+    if (IsAtEnd()) throw Error(Previous(), $"Expected '{GetTokenTypeString(type)}' {contextMsg} on line {expectedLine}, but reached end of file.");
+    Token nextToken = Peek()!;
+    if (nextToken.line != expectedLine) throw Error(nextToken, $"Expected '{GetTokenTypeString(type)}' {contextMsg} on line {expectedLine}, but found '{nextToken.writing}' on line {nextToken.line}.");
+    if (Check(type)) return Advance();
+    throw Error(nextToken, $"Expected '{GetTokenTypeString(type)}' {contextMsg} on line {expectedLine}, but got '{nextToken.writing}' ({GetTokenTypeString(nextToken.type)}).");
   }
   private Token Consume(TokenTypes type, string message)
   {
@@ -458,15 +489,17 @@ public class Parser
   }
   private ParseError Error(Token? token, string message)
   {
-    int line = token?.line ?? tokens.LastOrDefault()?.line ?? 0;
-    string where = token?.writing ?? "EOF";
-    errors.Add(new Error(line, $"Error near '{where}': {message}"));
+    int line = token?.line ?? ((current > 0) ? Previous().line : (tokens.Count > 0 ? tokens[0].line : 0));
+    string where = token?.writing ?? (IsAtEnd() ? "end of file" : "unknown token");
+    errors.Add(new Error(line, $"Parse Error near '{where}': {message}"));
     return new ParseError();
   }
   private void Synchronize()
   {
+    Advance();
     while (!IsAtEnd())
     {
+      if (current > 0 && Previous().line < Peek()!.line) return;
       switch (Peek()?.type)
       {
         case TokenTypes.GOTO:
@@ -477,10 +510,36 @@ public class Parser
         case TokenTypes.DRAWCIRCLE:
         case TokenTypes.DRAWRECTANGLE:
         case TokenTypes.FILL:
-        case TokenTypes.LABEL:
+        case TokenTypes.IDENTIFIER:
           return;
       }
       Advance();
     }
+  }
+  private string GetTokenTypeString(TokenTypes type)
+  {
+    return type switch
+    {
+      TokenTypes.LEFT_PAREN => "'('",
+      TokenTypes.RIGHT_PAREN => "')'",
+      TokenTypes.LEFT_BRACE => "'['",
+      TokenTypes.RIGHT_BRACE => "']'",
+      TokenTypes.COMMA => "','",
+      TokenTypes.ASSIGNED => "'<-'",
+      TokenTypes.IDENTIFIER => "identifier",
+      TokenTypes.NUMBER => "number",
+      TokenTypes.STRING => "string",
+      _ => type.ToString()
+    };
+  }
+  private Token? FindTokenForExpression(Expresion expr)
+  {
+    if (expr is Variable var) return var.name;
+    if (expr is Assign ass) return ass.name;
+    if (expr is Binary bin) return bin.Operator ?? FindTokenForExpression(bin.Leftside!);
+    if (expr is Unary un) return un.Operator ?? FindTokenForExpression(un.Rightside!);
+    if (expr is Logical log) return log.Operator ?? FindTokenForExpression(log.left);
+    if (expr is Grouping g) return FindTokenForExpression(g.expresion!);
+    return null;
   }
 }

@@ -2,9 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using PixelWallE.Views;
 using PixelWallE.ViewModels;
-using System.Diagnostics;
 
 namespace PixelWallE;
 public partial class App : Application
@@ -13,7 +11,6 @@ public partial class App : Application
     { 
         AvaloniaXamlLoader.Load(this);
     }
-  
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

@@ -121,16 +121,26 @@ public class Logical : Expresion
 }
 public class GetActualX : Expresion
 {
+    public Token KeywordToken { get; private set; }
     public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.VisitGetActualX(this);
     }
+    public GetActualX(Token keywordToken)
+    {
+        KeywordToken = keywordToken;
+    }
 }
 public class GetActualY : Expresion
 {
+    public Token KeywordToken { get; private set; }
     public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.VisitGetActualY(this);
+    }
+    public GetActualY(Token keywordToken)
+    {
+        KeywordToken = keywordToken;
     }
 }
 public class IsBrushColor : Expresion
@@ -139,10 +149,12 @@ public class IsBrushColor : Expresion
     {
         return visitor.VisitIsBrushColor(this);
     }
-    public Expresion color {get;private set;}
-    public IsBrushColor(Expresion color)
+    public Token KeywordToken { get; private set; }
+    public Expresion color { get; private set; }
+    public IsBrushColor(Token keywordToken, Expresion color)
     {
         this.color = color;
+        KeywordToken = keywordToken;
     }
 }
 public class IsBrushSize : Expresion
@@ -151,30 +163,46 @@ public class IsBrushSize : Expresion
     {
         return visitor.VisitIsBrushSize(this);
     }
-    public Expresion size {get;private set;}
-    public IsBrushSize(Expresion size)
+    public Token KeywordToken { get; private set; }
+    public Expresion size { get; private set; }
+    public IsBrushSize(Token keywordToken, Expresion size)
     {
         this.size = size;
+        KeywordToken = keywordToken;
     }
 }
-public class GetColorCount: Expresion   
+public class GetColorCount : Expresion
 {
-    public override R accept<R> (IVisitor<R> visitor)
+    public override R accept<R>(IVisitor<R> visitor)
     {
         return visitor.VisitGetColorCount(this);
     }
-    public Expresion color {get;private set;}
-    public Expresion x1 {get;private set;}
-    public Expresion y1 {get;private set;}
-    public Expresion x2 {get;private set;}
-    public Expresion y2 {get;private set;}
-    public GetColorCount(Expresion color,Expresion x1,Expresion y1,Expresion x2,Expresion y2)
+    public Expresion color { get; private set; }
+    public Expresion x1 { get; private set; }
+    public Expresion y1 { get; private set; }
+    public Expresion x2 { get; private set; }
+    public Expresion y2 { get; private set; }
+    public Token KeywordToken { get; private set; }
+    public GetColorCount(Token keywordToken, Expresion color, Expresion x1, Expresion y1, Expresion x2, Expresion y2)
     {
         this.color = color;
         this.x1 = x1;
         this.y1 = y1;
         this.x2 = x2;
         this.y2 = y2;
+        KeywordToken = keywordToken;
+    }
+}
+public class GetCanvasSize : Expresion
+{
+    public override R accept<R>(IVisitor<R> visitor)
+    {
+        return visitor.VisitGetCanvasSize(this);
+    }
+    public Token KeywordToken { get; private set; }
+    public GetCanvasSize(Token keywordToken)
+    {
+        KeywordToken = keywordToken;
     }
 }
 public class IsCanvasColor : Expresion
@@ -186,17 +214,12 @@ public class IsCanvasColor : Expresion
     public Expresion color {get;private set;}
     public Expresion vertical {get;private set;}
     public Expresion horizontal {get;private set;}
-    public IsCanvasColor(Expresion color,Expresion vertical,Expresion horizontal)
+    public Token KeywordToken { get; private set; }
+    public IsCanvasColor(Token keywordToken, Expresion color, Expresion vertical, Expresion horizontal)
     {
         this.color = color;
-        this.vertical =vertical;
+        this.vertical = vertical;
         this.horizontal = horizontal;
-    }
-}
-public class GetCanvasSize : Expresion
-{
-    public override R accept<R> (IVisitor<R> visitor)
-    {
-        return visitor.VisitGetCanvasSize(this);
+        KeywordToken = keywordToken;
     }
 }
