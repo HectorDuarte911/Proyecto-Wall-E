@@ -1,10 +1,13 @@
 namespace WALLE;
-
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
 {
-  internal class JumpRequest 
+  internal class JumpRequest
   {
-    public int TargetIndex { get; } 
+    public int TargetIndex { get; }
     public int OriginalGoToIndex { get; }
     public JumpRequest(int targetIndex, int originalGoToIndex)
     {
@@ -15,9 +18,11 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   public List<Error> errors { get; private set; }
   private Enviroment enviroment;
   private Dictionary<string, int> labelMap = new Dictionary<string, int>();
+  private Dictionary<string, int> labelLineNumbers = new Dictionary<string, int>();
   private const int MAXSteps = 10000;
   private int executionSteps = 0;
   private int executingStmtIndex = -1;
+
   public Interpreter(List<Error> errors)
   {
     this.errors = errors;
@@ -26,6 +31,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   public void interpret(List<Stmt> statements)
   {
     labelMap.Clear();
+    labelLineNumbers.Clear();
     executionSteps = 0;
     executingStmtIndex = -1;
     try
@@ -33,7 +39,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
       PreprocessLabels(statements);
       if (errors.Count > 0) return;
     }
-    catch (RuntimeError error)
+    catch (RuntimeError)
     {
       return;
     }
@@ -49,14 +55,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
       executingStmtIndex = currentStatementIndex;
       Stmt currentStmt = statements[executingStmtIndex];
       object? result = null;
-      try
-      {
-        result = execute(currentStmt);
-      }
-      catch (RuntimeError error)
-      {
-        return;
-      }
+      result = execute(currentStmt);
       if (result is JumpRequest jump)
       {
         if (jump.TargetIndex < 0 || jump.TargetIndex > statements.Count)
@@ -73,41 +72,70 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   private void PreprocessLabels(List<Stmt> statements)
   {
     labelMap.Clear();
+    labelLineNumbers.Clear();
     for (int i = 0; i < statements.Count; i++)
     {
       if (statements[i] is Label labelStmt)
       {
         string labelName = labelStmt.tag.writing;
+        int currentLine = labelStmt.tag.line;
         if (labelMap.ContainsKey(labelName))
         {
-          RuntimeError(labelStmt.tag, $"Duplicate label '{labelName}' found during interpretation preprocessing. Original definition was on line {GetLabelOriginalLine(labelName)}.");
+          int originalLine = labelLineNumbers.ContainsKey(labelName) ? labelLineNumbers[labelName] : -1;
+          RuntimeError(labelStmt.tag, $"Duplicate label '{labelName}' found. Original definition was on line {originalLine}.");
         }
-        else labelMap.Add(labelName, i + 1);
+        else
+        {
+          labelMap.Add(labelName, i + 1);
+          labelLineNumbers.Add(labelName, currentLine);
+        }
       }
     }
   }
-  private int GetLabelOriginalLine(string labelName)
-  {
-    return 0;
-  }
   private Token? GetCurrentToken(List<Stmt> statements, int index)
   {
-    if (index < 0 || index >= statements.Count) return null;
+    if (index < 0 || index >= statements.Count)
+    {
+      if (statements.Count > 0) return FindTokenFromAnywhere(statements.Last());
+      return null;
+    }
     Stmt stmt = statements[index];
     if (stmt is GoTo gt && gt.label != null) return gt.label.tag;
     if (stmt is Label lbl) return lbl.tag;
-    if (stmt is DrawLine dl) return dl.KeywordToken;
     if (stmt is Spawn sp) return sp.KeywordToken;
+    if (stmt is Size sz) return sz.KeywordToken;
+    if (stmt is Color co) return co.KeywordToken;
+    if (stmt is DrawLine dl) return dl.KeywordToken;
+    if (stmt is DrawCircle dc) return dc.KeywordToken;
+    if (stmt is DrawRectangle dr) return dr.KeywordToken;
     if (stmt is Fill fi) return fi.KeywordToken;
     if (stmt is Expression exprStmt)
     {
-      if (exprStmt.expresion is Assign ass && ass.name != null) return ass.name;
-      return FindToken(exprStmt.expresion);
+      Token? exprToken = FindToken(exprStmt.expresion);
+      if (exprToken != null) return exprToken;
+      if (exprStmt.expresion is Assign assign) return assign.name;
     }
-    return FindTokenFromAnywhere(stmt);
+    return
+    FindTokenFromAnywhere(stmt) ?? FindToken(ExtractExpression(stmt));
   }
-  private Token? FindTokenFromAnywhere(Stmt stmt)
+  private Expresion? ExtractExpression(Stmt? stmt)
   {
+    if (stmt is Expression exprStmt) return exprStmt.expresion;
+    return null;
+  }
+  private Token? FindTokenFromAnywhere(Stmt? stmt)
+  {
+    if (stmt == null) return null;
+    if (stmt is GoTo gt) return FindToken(gt.condition) ?? gt.label?.tag;
+    if (stmt is Label lbl) return lbl.tag;
+    if (stmt is Spawn sp) return sp.KeywordToken ?? FindToken(sp.x) ?? FindToken(sp.y);
+    if (stmt is Size sz) return sz.KeywordToken ?? FindToken(sz.number);
+    if (stmt is Color co) return co.KeywordToken ?? FindToken(co.color);
+    if (stmt is DrawLine dl) return dl.KeywordToken ?? FindToken(dl.dirx) ?? FindToken(dl.diry) ?? FindToken(dl.distance);
+    if (stmt is DrawCircle dc) return dc.KeywordToken ?? FindToken(dc.dirx) ?? FindToken(dc.diry) ?? FindToken(dc.radius);
+    if (stmt is DrawRectangle dr) return dr.KeywordToken ?? FindToken(dr.dirx) ?? FindToken(dr.diry) ?? FindToken(dr.distance) ?? FindToken(dr.width) ?? FindToken(dr.height);
+    if (stmt is Fill fi) return fi.KeywordToken;
+    if (stmt is Expression exprStmt) return FindToken(exprStmt.expresion);
     return null;
   }
   private object? execute(Stmt stmt)
@@ -126,20 +154,25 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   public object? VisitGoToStmt(GoTo stmt)
   {
     object? conditionResult = null;
+    Token errorContext = stmt.label?.tag ?? GetCurrentToken(new List<Stmt> { stmt }, 0)!;
     try
     {
       conditionResult = evaluate(stmt.condition);
     }
-    catch (RuntimeError err)
+    catch (RuntimeError)
     {
-      RuntimeError(stmt.label?.tag ?? GetCurrentToken(new List<Stmt> { stmt }, 0), $"Error evaluating GoTo condition: {err.Message}");
+      return null;
+    }
+    catch (Exception ex)
+    {
+      RuntimeError(errorContext, $"Unexpected internal error evaluating GoTo condition: {ex.Message}");
       return null;
     }
     if (IsTrue(conditionResult))
     {
       if (stmt.label == null || stmt.label.tag == null)
       {
-        RuntimeError(GetCurrentToken(new List<Stmt> { stmt }, 0), "Internal Error: GoTo statement has missing label information.");
+        RuntimeError(errorContext, "Internal Error: GoTo statement has missing label information at runtime.");
         return null;
       }
       string labelName = stmt.label.tag.writing;
@@ -311,30 +344,21 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   }
   public object visitLogical(Logical expresion)
   {
-    if (SameTypeValue(evaluate(expresion.right), evaluate(expresion.left)))
-    {
-      object left = evaluate(expresion.left);
-      if (expresion.Operator.type == TokenTypes.OR)
-      {
-        if (IsTrue(left)) return left;
-      }
+    object left = evaluate(expresion.left);
+    if (expresion.Operator.type == TokenTypes.OR) if (IsTrue(left)) return left;
       else if (!IsTrue(left)) return left;
-    }
-    else errors.Add(new Error(expresion.Operator.line, "A logical conected can only apply to a expresions of the same type"));
-
     return evaluate(expresion.right);
   }
   public object visitLiteral(Literal expresion)
   {
     if (expresion.Value is bool b) return b;
+    if (expresion.Value is int i) return i;
     if (expresion.Value is string s)
     {
-      if (int.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int intValue)) return intValue;
-      if (s.Equals("true", StringComparison.OrdinalIgnoreCase)) return true;
-      if (s.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
+      if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue)) return intValue;
       return s;
     }
-    if (expresion.Value is int i) return i;
+    if (expresion.Value == null) return null!;
     return expresion.Value;
   }
   public object visitGrouping(Grouping expresion)
@@ -348,15 +372,12 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     {
       case TokenTypes.MINUS:
         NumberOperand(expresion.Operator, right);
-        return -(int)right;
+        try { return checked(-(int)right); }
+        catch (OverflowException) { throw new RuntimeError(expresion.Operator, $"Unary minus operation resulted in arithmetic overflow for value {right}."); }
       case TokenTypes.BANG:
         return !IsTrue(right);
-      case TokenTypes.POW:
-        NumberOperand(expresion.Operator, right);
-        int num = (int)right;
-        return num * num;
     }
-    throw new RuntimeError(expresion.Operator, "Unknown unary operator.");
+    throw new RuntimeError(expresion.Operator, $"Unknown or unsupported unary operator '{expresion.Operator.writing}'.");
   }
   public object visitVariable(Variable expresion)
   {
@@ -366,181 +387,209 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   {
     object left = evaluate(expresion.Leftside!);
     object right = evaluate(expresion.Rightside!);
-    switch (expresion.Operator!.type)
+    var opToken = expresion.Operator!;
+    switch (opToken.type)
     {
-      case TokenTypes.MINUS:
-        NumberOperands(expresion.Operator, left, right);
-        return (int)left - (int)right;
       case TokenTypes.PLUS:
-        if (left is string || right is string) return left?.ToString() + right?.ToString();
-        NumberOperands(expresion.Operator, left, right);
-        return (int)left + (int)right;
+      case TokenTypes.MINUS:
       case TokenTypes.DIVIDE:
-        NumberOperands(expresion.Operator, left, right);
-        if ((int)right == 0)
-          throw new RuntimeError(expresion.Operator, "Division by zero.");
-        return (int)left / (int)right;
       case TokenTypes.PRODUCT:
-        NumberOperands(expresion.Operator, left, right);
-        return (int)left * (int)right;
       case TokenTypes.MODUL:
-        NumberOperands(expresion.Operator, left, right);
-        if ((int)right == 0)
-          throw new RuntimeError(expresion.Operator, "Modulo by zero.");
-        return (int)left % (int)right;
+        NumberOperands(opToken, left, right);
+        int leftInt = (int)left;
+        int rightInt = (int)right;
+        try
+        {
+          switch (opToken.type)
+          {
+            case TokenTypes.PLUS: return checked(leftInt + rightInt);
+            case TokenTypes.MINUS: return checked(leftInt - rightInt);
+            case TokenTypes.PRODUCT: return checked(leftInt * rightInt);
+            case TokenTypes.DIVIDE:
+              if (rightInt == 0) throw new RuntimeError(opToken, "Division by zero.");
+              return leftInt / rightInt;
+            case TokenTypes.MODUL:
+              if (rightInt == 0) throw new RuntimeError(opToken, "Modulo by zero.");
+              return leftInt % rightInt;
+            default:
+              throw new RuntimeError(opToken, $"Internal logic error: Unhandled arithmetic operator '{opToken.writing}' in inner switch.");
+          }
+        }
+        catch (OverflowException)
+        {
+          throw new RuntimeError(opToken, $"Arithmetic operation '{opToken.writing}' resulted in overflow.");
+        }
+      case TokenTypes.POW:
+        NumberOperands(opToken, left, right);
+        int baseVal = (int)left;
+        int expVal = (int)right;
+        if (expVal < 0)throw new RuntimeError(opToken, "Negative exponents are not supported for integer power operations.");
+        if (expVal == 0)return 1;
+        if (baseVal == 0)return 0;
+        if (baseVal == 1) return 1;
+        if (baseVal == -1) return (expVal % 2 == 0) ? 1 : -1;
+        long result = 1;
+        try
+        {
+          for (int i = 0; i < expVal; i++)result = checked(result * baseVal);
+          if (result > int.MaxValue || result < int.MinValue)throw new OverflowException("Final result of power operation exceeds Int32 range.");
+          return (int)result;
+        }
+        catch (OverflowException)
+        {
+          throw new RuntimeError(opToken, $"Arithmetic operation '{baseVal} ** {expVal}' resulted in overflow.");
+        }
       case TokenTypes.GREATER:
-        NumberOperands(expresion.Operator, left, right);
-        return (int)left > (int)right;
       case TokenTypes.GREATER_EQUAL:
-        NumberOperands(expresion.Operator, left, right);
-        return (int)left >= (int)right;
       case TokenTypes.LESS:
-        NumberOperands(expresion.Operator, left, right);
-        return (int)left < (int)right;
       case TokenTypes.LESS_EQUAL:
-        NumberOperands(expresion.Operator, left, right);
-        return (int)left <= (int)right;
+        NumberOperands(opToken, left, right);
+        int compLeft = (int)left;
+        int compRight = (int)right;
+        switch (opToken.type)
+        {
+          case TokenTypes.GREATER: return compLeft > compRight;
+          case TokenTypes.GREATER_EQUAL: return compLeft >= compRight;
+          case TokenTypes.LESS: return compLeft < compRight;
+          case TokenTypes.LESS_EQUAL: return compLeft <= compRight;
+          default:
+            throw new RuntimeError(opToken, $"Internal logic error: Unhandled comparison operator '{opToken.writing}' in inner switch.");
+        }
       case TokenTypes.BANG_EQUAL:
         return !IsEqual(left, right);
       case TokenTypes.EQUAL_EQUAL:
         return IsEqual(left, right);
+      default:
+        throw new RuntimeError(opToken, $"Unknown or unsupported binary operator '{opToken.writing}'.");
     }
-    throw new RuntimeError(expresion.Operator, "Unknown binary operator.");
   }
-  private bool IsEqual(object left, object right)
+  private void NumberOperands(Token Operator, object? left, object? right)
+  {
+    if (left is int && right is int) return;
+    string leftTypeName = left?.GetType().Name ?? "null";
+    string rightTypeName = right?.GetType().Name ?? "null";
+    throw new RuntimeError(Operator, $"Operands must both be numbers for operator '{Operator.writing}', but got {leftTypeName} ('{Stringify(left)}') and {rightTypeName} ('{Stringify(right)}').");
+  }
+  private bool IsEqual(object? left, object? right)
   {
     if (left == null && right == null) return true;
-    if (left == null) return false;
-    string? leftstr = left.ToString(), rightstr = right.ToString();
-    return leftstr == rightstr;
+    if (left == null || right == null) return false;
+    if (left.GetType() != right.GetType()) return false;
+    return left.Equals(right);
   }
-  private bool IsTrue(object ObjectConcrete)
+  private bool IsTrue(object? ObjectConcrete)
   {
     if (ObjectConcrete == null) return false;
     if (ObjectConcrete is bool booleanValue) return booleanValue;
+    if (ObjectConcrete is int intValue) return intValue != 0;
+    if (ObjectConcrete is string stringValue) return !string.IsNullOrEmpty(stringValue);
     return true;
   }
-  private void NumberOperand(Token Operator, object operand)
+  private void NumberOperand(Token Operator, object? operand)
   {
     if (operand is int) return;
-    throw new RuntimeError(Operator, "Operand must be a number.");
+    string typeName = operand?.GetType().Name ?? "null";
+    throw new RuntimeError(Operator, $"Operand must be a number, but got {typeName} ('{Stringify(operand)}').");
   }
-  private void NumberOperands(Token Operator, object left, object right)
+  private string Stringify(object? obj)
   {
-    if (left is int && right is int) return;
-    throw new RuntimeError(Operator, "Operands must be numbers.");
+    if (obj == null) return "nil";
+    if (obj is bool b) return b ? "true" : "false";
+    if (obj is IFormattable formattable) return formattable.ToString(null, CultureInfo.InvariantCulture);
+    return obj.ToString() ?? "nil";
   }
-  private bool IsValidColor(string color)
+  private bool IsValidColor(string? color)
   {
-    string newcolor = "";
-    bool flag = false;
-    for (int i = 0; i < color.Length; i++)
-    {
-      if (color[i] == ' ')
-      {
-        if (flag) break;
-      }
-      else
-      {
-        newcolor += color[i];
-        flag = true;
-      }
-    }
-    switch (newcolor)
-    {
-      case "Red":
-      case "Blue":
-      case "Green":
-      case "Yellow":
-      case "Orange":
-      case "Purple":
-      case "Black":
-      case "White":
-      case "Transparent": return true;
-      default: return false;
-    }
+    if (string.IsNullOrWhiteSpace(color)) return false;
+    string normalizedColor = color.Trim();
+    var validColors = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Black", "White", "Transparent" };
+    return validColors.Contains(normalizedColor);
   }
   private bool IsValidDir(int dir)
   {
-    return dir == 1 || dir == -1 || dir == 0;
-  }
-  private bool SameTypeValue(object left, object right)
-  {
-    if (left is bool && right is bool) return true;
-    if (left is int && right is int) return true;
-    return false;
+    return dir <= 1 && dir >= -1;
   }
   private bool TryEvaluateAndConvert<T>(Expresion expr, Token contextToken, string argName, out T result, Func<T, bool>? validator = null, string? validationErrorMsg = null)
   {
     result = default(T)!;
     object evaluatedValue;
-    try
-    {
-      evaluatedValue = evaluate(expr);
-    }
+    int errorLine = contextToken.line;
+    try { evaluatedValue = evaluate(expr); }
     catch (RuntimeError err)
     {
-      errors.Add(new Error(contextToken.line, $"Runtime Error evaluating argument '{argName}': {err.Message}"));
+      errors.Add(new Error(errorLine, $"Runtime Error evaluating argument '{argName}': {err.Message}"));
       return false;
     }
-    int errorLine = contextToken.line;
-    if (evaluatedValue is T typedValue) result = typedValue;
-    else if (typeof(T) == typeof(int))
+    catch (Exception ex)
     {
-      int intResult;
-      if (evaluatedValue is int i) intResult = i;
-      else if (evaluatedValue is string s && int.TryParse(s, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int parsedInt))
-        intResult = parsedInt;
+      errors.Add(new Error(errorLine, $"Unexpected internal error evaluating argument '{argName}': {ex.Message}"));
+      return false;
+    }
+    try
+    {
+      if (evaluatedValue is T typedValue) result = typedValue;
+      else if (typeof(T) == typeof(int))
+      {
+        int intResult;
+        if (evaluatedValue is int i) intResult = i;
+        else if (evaluatedValue is string s && int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedInt))
+          intResult = parsedInt;
+        else
+        {
+          errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires an integer value, but got type '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{Stringify(evaluatedValue)}')."));
+          return false;
+        }
+        result = (T)(object)intResult;
+      }
+      else if (typeof(T) == typeof(string)) result = (T)(object)Stringify(evaluatedValue);
+      else if (typeof(T) == typeof(bool)) result = (T)(object)IsTrue(evaluatedValue);
       else
       {
-        errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires an integer value, but got type '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{evaluatedValue}')."));
+        errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires a '{typeof(T).Name}' value, but got type '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{Stringify(evaluatedValue)}')."));
         return false;
       }
-      result = (T)(object)intResult;
-    }
-    else if (typeof(T) == typeof(string))
-    {
-      if (evaluatedValue != null) result = (T)(object)evaluatedValue.ToString()!;
-      else
+      if (validator != null && !validator(result))
       {
-        errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires a '{typeof(T).Name}' value, but got null."));
+        string specificError = validationErrorMsg ?? $"Validation failed for argument '{argName}'";
+        errors.Add(new Error(errorLine, $"Runtime Error: {specificError} (Actual value: '{Stringify(result)}')"));
         return false;
       }
+      return true;
     }
-    else
+    catch (Exception ex)
     {
-      errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires a '{typeof(T).Name}' value, but got type '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{evaluatedValue}')."));
+      errors.Add(new Error(errorLine, $"Unexpected internal error converting or validating argument '{argName}': {ex.Message}"));
       return false;
     }
-    if (validator != null && !validator(result))
-    {
-      string specificError = validationErrorMsg ?? $"Validation failed for argument '{argName}'";
-      errors.Add(new Error(errorLine, $"Runtime Error: {specificError} (Actual value: '{result}')"));
-      return false;
-    }
-    return true;
   }
   private Token? FindToken(Expresion? expr)
   {
+    if (expr == null) return null;
     if (expr is Binary bin) return bin.Operator ?? FindToken(bin.Leftside);
+    if (expr is Unary un) return un.Operator ?? FindToken(un.Rightside);
+    if (expr is Logical log) return log.Operator ?? FindToken(log.left);
+    if (expr is Assign ass) return ass.name ?? FindToken(ass.value);
+    if (expr is Variable var) return var.name;
     if (expr is GetActualX gx) return gx.KeywordToken;
     if (expr is GetActualY gy) return gy.KeywordToken;
     if (expr is IsBrushColor ibc) return ibc.KeywordToken ?? FindToken(ibc.color);
-    if (expr is Unary un) return un.Operator ?? FindToken(un.Rightside);
-    if (expr is Variable var) return var.name;
-    if (expr is Assign ass) return ass.name ?? FindToken(ass.value);
-    if (expr is Literal lit) return null;
-    if (expr is Logical log) return log.Operator ?? FindToken(log.left);
+    if (expr is IsBrushSize ibs) return ibs.KeywordToken ?? FindToken(ibs.size);
+    if (expr is GetColorCount gcc) return gcc.KeywordToken ?? FindToken(gcc.color);
+    if (expr is IsCanvasColor icc) return icc.KeywordToken ?? FindToken(icc.color);
+    if (expr is GetCanvasSize gcs) return gcs.KeywordToken;
     if (expr is Grouping grp) return FindToken(grp.expresion);
+    if (expr is Literal lit) return null;
     return null;
   }
   private void RuntimeError(Token? token, string message)
   {
     int line = token?.line ?? -1;
+    if (line <= 0 && executingStmtIndex >= 0) { }
+    if (line <= 0 && errors.Any()) line = errors.Last().Location;
+    if (line <= 0) line = -1;
     string errorMessage = $"[Runtime Error] ";
     if (line > 0) errorMessage += $"Line {line}: ";
     if (token != null) errorMessage += $"Near '{token.writing}': ";
-    else errorMessage += "Near unknown token: ";
     errorMessage += message;
     errors.Add(new Error(line, errorMessage));
     throw new RuntimeError(token, message);

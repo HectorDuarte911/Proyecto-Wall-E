@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.Text;
 using WALLE;
 namespace PixelWallE.ViewModels;
+
 public partial class MainWindowViewModel : ObservableObject
 {
     [ObservableProperty]
@@ -10,7 +11,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private TextEditorViewModel _editorViewModel;
     [ObservableProperty]
-    private string _compilerOutput = "Listo.";
+    private string _compilerOutput = "Ready.";
     public MainWindowViewModel()
     {
         _canvasViewModel = new DrawCanvasViewModel();
@@ -21,87 +22,96 @@ public partial class MainWindowViewModel : ObservableObject
     private void RunScript()
     {
         string codeToExecute = EditorViewModel.Document.Text;
-        CompilerOutput = "Compilando y ejecutando...";
-        List<Error> errors = new List<Error>();
+        CompilerOutput = "Compiling and executing...";
+        List<Error> allErrors = new List<Error>();
         Canva.InitCanvas();
         Canva.RedimensionCanvas(CanvasViewModel.CanvasDimension);
         Walle.Spawn(CanvasViewModel.CanvasDimension / 2, CanvasViewModel.CanvasDimension / 2);
         Walle.Color("Transparent");
         Walle.Size(1);
+        Interpreter? interpreter = null;
         try
         {
             Lexical lexer = new Lexical(codeToExecute);
             List<Token> tokens = lexer.TokensSearch();
-            errors.AddRange(lexer.errors);
-            if (errors.Count > 0)
+            allErrors.AddRange(lexer.errors);
+            if (allErrors.Count > 0)
             {
-                ShowErrors(errors);
-                CompilerOutput += "\nEjecución cancelada debido a errores léxicos.";
+                CompilerOutput = "Execution cancelled due to lexical errors.";
+                ShowErrors(allErrors);
                 return;
             }
-            if (tokens.Count == 0 && !string.IsNullOrWhiteSpace(codeToExecute))
+            if (tokens.Count == 0)
             {
-                CompilerOutput = "No se encontraron comandos ejecutables.";
+                CompilerOutput = string.IsNullOrWhiteSpace(codeToExecute) ?"Editor is empty. Nothing to execute." :"No executable commands found.";
                 CanvasViewModel.SignalCanvasUpdate();
                 return;
             }
-            else if (tokens.Count == 0)
-            {
-                CompilerOutput = "Editor vacío. No hay nada que ejecutar.";
-                CanvasViewModel.SignalCanvasUpdate();
-                return;
-            }
-            Parser parser = new Parser(tokens, errors);
+            Parser parser = new Parser(tokens, allErrors);
             List<Stmt> statements = parser.Parse();
-            errors.AddRange(parser.errors);
-            if (errors.Count > 0)
+            if (allErrors.Count > 0)
             {
-                ShowErrors(errors);
-                CompilerOutput += "\nEjecución cancelada debido a errores de sintaxis.";
+                CompilerOutput = "Execution cancelled due to syntax errors.";
+                ShowErrors(allErrors);
                 return;
             }
-
-            Interpreter interpreter = new Interpreter(errors);
+            interpreter = new Interpreter(allErrors);
             interpreter.interpret(statements);
-            errors.AddRange(interpreter.errors);
-            if (errors.Count > 0)
+            if (allErrors.Count > 0)
             {
-                ShowErrors(errors);
-                CanvasViewModel.SignalCanvasUpdate();
+                CompilerOutput = "Execution completed with errors.";
+                ShowErrors(allErrors);
             }
-            else
-            {
-                CompilerOutput = "Ejecución completada sin errores.";
-                CanvasViewModel.SignalCanvasUpdate();
-            }
+            else CompilerOutput = "Execution completed successfully.";
+        }
+        catch (RuntimeError rtError)
+        {
+            string specificErrorMessage = rtError.Message;
+            int errorLine = rtError.token?.line ?? -1;
+            CompilerOutput = "Runtime Error" + '\n' + $"(Line {errorLine}): {specificErrorMessage}";
+            List<Error> otherErrors = allErrors
+                .Where(e => !(e.Location == errorLine && e.Argument == specificErrorMessage))
+                .ToList();
+            if (otherErrors.Count > 0) ShowErrors(otherErrors);
         }
         catch (Exception ex)
         {
-            CompilerOutput = $"Error inesperado durante la ejecución:\n{ex.Message}\n{ex.StackTrace}";
+            CompilerOutput = $"Unexpected Error: {ex.Message}\n{ex.StackTrace}";
+            if (allErrors.Count > 0)
+            {
+                StringBuilder sb = new StringBuilder(CompilerOutput);
+                sb.AppendLine("\n Previous Errors (Lexical/Syntax) ");
+                HashSet<string> reportedMessages = new HashSet<string>();
+                foreach (var err in allErrors)
+                {
+                    string errorMsg = $"- Line {err.Location}: {err.Argument}";
+                    if (reportedMessages.Add($"L{err.Location}:{err.Argument}")) sb.AppendLine(errorMsg);
+                }
+                CompilerOutput = sb.ToString();
+            }
+        }
+        finally
+        {
             CanvasViewModel.SignalCanvasUpdate();
         }
     }
-    private void ShowErrors(List<Error> errors)
+    private void ShowErrors(List<Error> errorsToShow)
     {
-        StringBuilder errorBuilder = new StringBuilder();
-        List<Error> Doing = new List<Error>();
-        errorBuilder.AppendLine("Errores encontrados:");
-        foreach (var error in errors)
+        if (errorsToShow == null || errorsToShow.Count == 0) return;
+        StringBuilder errorDetailsBuilder = new StringBuilder();
+        errorDetailsBuilder.AppendLine("\n Error Details ");
+        HashSet<string> reportedMessages = new HashSet<string>();
+        bool detailsAdded = false;
+        foreach (var error in errorsToShow)
         {
-            if (NoShowErrors(Doing, error))
+            string uniqueErrorKey = $"L{error.Location}:{error.Argument}";
+            string errorMsg = $"- Line {error.Location}: {error.Argument}";
+            if (reportedMessages.Add(uniqueErrorKey))
             {
-            errorBuilder.AppendLine($"- Line {error.Location}: {error.Argument}");
-            Doing.Add(error);
+                errorDetailsBuilder.AppendLine(errorMsg);
+                detailsAdded = true;
             }
         }
-        CompilerOutput = errorBuilder.ToString();
-    }
-    private bool NoShowErrors(List<Error> errors, Error error)
-    {
-        foreach (var er in errors)
-        {
-            if (er == error) return false;
-        }
-        return true;
+        if (detailsAdded) CompilerOutput += errorDetailsBuilder.ToString();
     }
 }

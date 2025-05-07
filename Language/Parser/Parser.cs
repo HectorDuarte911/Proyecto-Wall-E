@@ -44,12 +44,6 @@ public class Parser
     return statementslist;
   }
   private class ParseError : Exception { }
-  private int GetStatementEndLine(Stmt stmt)
-  {
-    if (current > 0) return Previous().line;
-    if (tokens.Count > 0) return tokens[0].line;
-    return 0;
-  }
   private void CheckForTrailingTokens(Stmt parsedStatement)
   {
     if (!IsAtEnd())
@@ -91,11 +85,6 @@ public class Parser
     if (definedLabels.ContainsKey(labelName)) Error(tag, $"Label '{labelName}' is already defined on line {definedLabels[labelName].line}.");
     else definedLabels.Add(labelName, tag);
     return new Label(tag);
-  }
-  private Stmt LabelReferenceOrError()
-  {
-    Token labelKeywordToken = Previous();
-    throw Error(labelKeywordToken, "The 'LABEL' keyword is reserved and cannot be used directly. Define labels using an identifier alone on a line (e.g., 'myLabelName'), and reference them in GoTo statements (e.g., 'GoTo[myLabelName](...)').");
   }
   private Stmt GoToStatement(Token startToken)
   {
@@ -273,30 +262,34 @@ public class Parser
     }
     return expr;
   }
-  private Expresion Factor()
-  {
-    Expresion expr = Unary();
-    while (Match(TokenTypes.DIVIDE, TokenTypes.PRODUCT, TokenTypes.MODUL))
+   private Expresion Factor()
     {
-      Token op = Previous();
-      Expresion right = Unary();
-      expr = new Binary(expr, op, right);
+        Expresion expr = Power();
+        while (Match(TokenTypes.DIVIDE, TokenTypes.PRODUCT, TokenTypes.MODUL))
+        {
+            Token op = Previous();
+            Expresion right = Power();
+            expr = new Binary(expr, op, right);
+        }
+        return expr;
     }
-    return expr;
-  }
+    private Expresion Power()
+    {
+        Expresion expr = Unary();
+        if (Match(TokenTypes.POW))
+        {
+            Token op = Previous();
+            Expresion right = Power();
+            expr = new Binary(expr, op, right);
+        }
+        return expr;
+    }
   private Expresion Unary()
   {
     if (Match(TokenTypes.BANG, TokenTypes.MINUS))
     {
       Token op = Previous();
       Expresion right = Unary();
-      return new Unary(op, right);
-    }
-    if (Match(TokenTypes.POW))
-    {
-      Token op = Previous();
-      Expresion right = Primary();
-      Error(op, "Unary power ' ** ' is not standard. Did you mean multiplication '*' or assignment '<-'?");
       return new Unary(op, right);
     }
     return Primary();
