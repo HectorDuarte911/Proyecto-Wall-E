@@ -8,18 +8,13 @@
              x:DataType="vm:DrawCanvasViewModel">
    <DockPanel LastChildFill="True">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="5">
-            <TextBlock Text="Tamaño (N x N):" VerticalAlignment="Center"/>
+            <TextBlock Text="" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding CanvasDimension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            Minimum="2"
                            Maximum="{Binding MaxCanvasDimension}"
                            Width="80"
                            Increment="1"
                            VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding CanvasDimension}"
-                       FontSize="18" 
-                       FontWeight="Bold"
-                       VerticalAlignment="Center"
-                       Margin="5,0,10,0"/>
         </StackPanel>
         <Border BorderBrush="LightGray" BorderThickness="1" Margin="5"
                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch">

@@ -56,9 +56,8 @@ public class Lexical
       case '[': AddToken(TokenTypes.LEFT_BRACE); break;
       case ']': AddToken(TokenTypes.RIGHT_BRACE); break;
       case '/': AddToken(TokenTypes.DIVIDE); break;
-      case '|':
-        if (Match('|')) AddToken(TokenTypes.OR);
-        else errors.Add(new Error(line, "Unexpected character '|' , maybe you want to use ||")); break;
+      case '|':if (Match('|')) AddToken(TokenTypes.OR);
+      else errors.Add(new Error(line, "Unexpected character '|' , maybe you want to use ||")); break;
       case '&': AddToken(Match('&') ? TokenTypes.AND : TokenTypes.AND); break;
       case '%': AddToken(TokenTypes.MODUL); break;
       case ',': AddToken(TokenTypes.COMMA); break;
@@ -69,26 +68,17 @@ public class Lexical
       case '>': AddToken(Match('=') ? TokenTypes.GREATER_EQUAL : TokenTypes.GREATER); break;
       case '<': AddToken(Match('=') ? TokenTypes.LESS_EQUAL : Match('-') ? TokenTypes.ASSIGNED : TokenTypes.LESS); break;
       case '=': if (Match('=')) AddToken(TokenTypes.EQUAL_EQUAL); else errors.Add(new Error(line, "Unexpected character '=', maybe you mean '=='? Assignment is '<-'")); break; // Modified error message
-      case ' ':
-      case '\r':
-      case '\t': break;
+      case ' ':case '\r':case '\t': break;
       case '\n': line++; break;
       case '"': StringRead(); break;
-      default:
-        if (ISDigit(c)) NumberRead();
+      default:if (ISDigit(c)) NumberRead();
         else if (IsAlpha(c)) IdentifierOrKeyword();
         else errors.Add(new Error(line, "Unexpected character"));
         break;
     }
   }
-  private bool IsAlpha(char c)
-  {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-';
-  }
-  private bool IsAlphaNumeric(char c)
-  {
-    return IsAlpha(c) || ISDigit(c);
-  }
+  private bool IsAlpha(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-';
+  private bool IsAlphaNumeric(char c) => IsAlpha(c) || ISDigit(c);
   private void StringRead()
   {
     bool flag = false;
@@ -111,10 +101,7 @@ public class Lexical
   /// </summary>
   /// <param name="c">Posible number</param>
   /// <returns>True if is a number</returns>
-  private bool ISDigit(char c)
-  {
-    return c >= '0' && c <= '9';
-  }
+  private bool ISDigit(char c) => c >= '0' && c <= '9';
   /// <summary>
   /// Inspect how large if the detected number
   /// </summary>
@@ -126,19 +113,13 @@ public class Lexical
     while (!EOF() && IsAlphaNumeric(LookAfter())) Advance();
     errors.Add(new Error(line, "Invalid number format: unexpected characters after number."));
     }
-    else
-    {
-    AddTokenHelper(TokenTypes.NUMBER, source.Substring(start, current - start));
-    }
+    else AddTokenHelper(TokenTypes.NUMBER, source.Substring(start, current - start));
   }
   /// <summary>
   /// Call the auxiliar to add a neutral token whith no literal
   /// </summary>
   /// <param name="type"></param>
-  private void AddToken(TokenTypes type)
-  {
-    AddTokenHelper(type, null!);
-  }
+  private void AddToken(TokenTypes type) => AddTokenHelper(type, null!);
   /// <summary>
   /// Add the token to the list of tokens in the line
   /// </summary>
@@ -179,10 +160,7 @@ public class Lexical
     current++;
     return source[current - 1];
   }
-  private bool EOF()
-  {
-    return current >= source.Length;
-  }
+  private bool EOF() => current >= source.Length;
 private void IdentifierOrKeyword()
 {
     while (IsAlphaNumeric(LookAfter())) Advance();
@@ -208,10 +186,7 @@ private void IdentifierOrKeyword()
       case "IsCanvasColor": type = TokenTypes.ISCANVASCOLOR; break;
       case "true": type = TokenTypes.TRUE; literal = true; break;
       case "false": type = TokenTypes.FALSE; literal = false; break;
-      default:
-      type = TokenTypes.IDENTIFIER;
-      literal = text;
-      break;
+      default:type = TokenTypes.IDENTIFIER;literal = text;break;
     }
     AddTokenHelper(type, literal!);
 }

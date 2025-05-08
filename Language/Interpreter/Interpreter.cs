@@ -7,8 +7,8 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
 {
   internal class JumpRequest
   {
-    public int TargetIndex { get; }
-    public int OriginalGoToIndex { get; }
+    public int TargetIndex { get; private set; }
+    public int OriginalGoToIndex { get; private set;}
     public JumpRequest(int targetIndex, int originalGoToIndex)
     {
       TargetIndex = targetIndex;
@@ -22,7 +22,6 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   private const int MAXSteps = 10000;
   private int executionSteps = 0;
   private int executingStmtIndex = -1;
-
   public Interpreter(List<Error> errors)
   {
     this.errors = errors;
@@ -102,13 +101,13 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     Stmt stmt = statements[index];
     if (stmt is GoTo gt && gt.label != null) return gt.label.tag;
     if (stmt is Label lbl) return lbl.tag;
-    if (stmt is Spawn sp) return sp.KeywordToken;
-    if (stmt is Size sz) return sz.KeywordToken;
-    if (stmt is Color co) return co.KeywordToken;
-    if (stmt is DrawLine dl) return dl.KeywordToken;
-    if (stmt is DrawCircle dc) return dc.KeywordToken;
-    if (stmt is DrawRectangle dr) return dr.KeywordToken;
-    if (stmt is Fill fi) return fi.KeywordToken;
+    if (stmt is Spawn sp) return sp.keyword;
+    if (stmt is Size sz) return sz.keyword;
+    if (stmt is Color co) return co.keyword;
+    if (stmt is DrawLine dl) return dl.keyword;
+    if (stmt is DrawCircle dc) return dc.keyword;
+    if (stmt is DrawRectangle dr) return dr.keyword;
+    if (stmt is Fill fi) return fi.keyword;
     if (stmt is Expression exprStmt)
     {
       Token? exprToken = FindToken(exprStmt.expresion);
@@ -128,24 +127,18 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     if (stmt == null) return null;
     if (stmt is GoTo gt) return FindToken(gt.condition) ?? gt.label?.tag;
     if (stmt is Label lbl) return lbl.tag;
-    if (stmt is Spawn sp) return sp.KeywordToken ?? FindToken(sp.x) ?? FindToken(sp.y);
-    if (stmt is Size sz) return sz.KeywordToken ?? FindToken(sz.number);
-    if (stmt is Color co) return co.KeywordToken ?? FindToken(co.color);
-    if (stmt is DrawLine dl) return dl.KeywordToken ?? FindToken(dl.dirx) ?? FindToken(dl.diry) ?? FindToken(dl.distance);
-    if (stmt is DrawCircle dc) return dc.KeywordToken ?? FindToken(dc.dirx) ?? FindToken(dc.diry) ?? FindToken(dc.radius);
-    if (stmt is DrawRectangle dr) return dr.KeywordToken ?? FindToken(dr.dirx) ?? FindToken(dr.diry) ?? FindToken(dr.distance) ?? FindToken(dr.width) ?? FindToken(dr.height);
-    if (stmt is Fill fi) return fi.KeywordToken;
+    if (stmt is Spawn sp) return sp.keyword ?? FindToken(sp.x) ?? FindToken(sp.y);
+    if (stmt is Size sz) return sz.keyword ?? FindToken(sz.number);
+    if (stmt is Color co) return co.keyword ?? FindToken(co.color);
+    if (stmt is DrawLine dl) return dl.keyword ?? FindToken(dl.dirx) ?? FindToken(dl.diry) ?? FindToken(dl.distance);
+    if (stmt is DrawCircle dc) return dc.keyword ?? FindToken(dc.dirx) ?? FindToken(dc.diry) ?? FindToken(dc.Radius);
+    if (stmt is DrawRectangle dr) return dr.keyword ?? FindToken(dr.dirx) ?? FindToken(dr.diry) ?? FindToken(dr.distance) ?? FindToken(dr.width) ?? FindToken(dr.height);
+    if (stmt is Fill fi) return fi.keyword;
     if (stmt is Expression exprStmt) return FindToken(exprStmt.expresion);
     return null;
   }
-  private object? execute(Stmt stmt)
-  {
-    return stmt.accept(this);
-  }
-  private object evaluate(Expresion expresion)
-  {
-    return expresion.accept(this);
-  }
+  private object? execute(Stmt stmt) => stmt.accept(this);
+  private object evaluate(Expresion expresion) => expresion.accept(this);
   public object VisitExpressionStmt(Expression stmt)
   {
     evaluate(stmt.expresion);
@@ -185,13 +178,10 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     }
     return null;
   }
-  public object? VisitLabelStmt(Label stmt)
-  {
-    return null;
-  }
+  public object? VisitLabelStmt(Label stmt) => null;
   public object? VisitSpawnStmt(Spawn stmt)
   {
-    Token fallbackToken = stmt.KeywordToken;
+    Token fallbackToken = stmt.keyword;
     Token xContext = FindToken(stmt.x) ?? fallbackToken;
     Token yContext = FindToken(stmt.y) ?? fallbackToken;
     if (!TryEvaluateAndConvert<int>(stmt.x, xContext, "Spawn X", out int x) || !TryEvaluateAndConvert<int>(stmt.y, yContext, "Spawn Y", out int y)) return null;
@@ -201,7 +191,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   }
   public object? VisitSizeStmt(Size stmt)
   {
-    Token fallbackToken = stmt.KeywordToken;
+    Token fallbackToken = stmt.keyword;
     Token context = FindToken(stmt.number) ?? fallbackToken;
     if (!TryEvaluateAndConvert<int>(stmt.number, context, "Size", out int size)) return null;
     if (size <= 0) errors.Add(new Error(context.line, $"Runtime Error: Size ({size}) must be a positive integer."));
@@ -210,7 +200,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   }
   public object? VisitColorStmt(Color stmt)
   {
-    Token fallbackToken = stmt.KeywordToken;
+    Token fallbackToken = stmt.keyword;
     Token context = FindToken(stmt.color) ?? fallbackToken;
     if (!TryEvaluateAndConvert<string>(stmt.color, context, "Color", out string colorValue)) return null;
     if (!IsValidColor(colorValue)) errors.Add(new Error(context.line, $"Runtime Error: '{colorValue}' is not a valid color name."));
@@ -219,36 +209,36 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   }
   public object? VisitDrawLineStmt(DrawLine stmt)
   {
-    Token fallbackToken = stmt.KeywordToken;
+    Token fallbackToken = stmt.keyword;
     Token dirXContext = FindToken(stmt.dirx) ?? fallbackToken;
     Token dirYContext = FindToken(stmt.diry) ?? fallbackToken;
     Token distContext = FindToken(stmt.distance) ?? fallbackToken;
     if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawLine direction X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
-            !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawLine direction Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
-            !TryEvaluateAndConvert<int>(stmt.distance, distContext, "DrawLine distance", out int distance)) return null;
+        !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawLine direction Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
+        !TryEvaluateAndConvert<int>(stmt.distance, distContext, "DrawLine distance", out int distance)) return null;
     Walle.DrawLine(dirX, dirY, distance);
     return null;
   }
   public object? VisitDrawCircleStmt(DrawCircle stmt)
   {
-    Token fallbackToken = stmt.KeywordToken;
+    Token fallbackToken = stmt.keyword;
     Token dirXContext = FindToken(stmt.dirx) ?? fallbackToken;
     Token dirYContext = FindToken(stmt.diry) ?? fallbackToken;
-    Token radiusContext = FindToken(stmt.radius) ?? fallbackToken;
+    Token RadiusContext = FindToken(stmt.Radius) ?? fallbackToken;
     if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawCircle center offset X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
         !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawCircle center offset Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
-        !TryEvaluateAndConvert<int>(stmt.radius, radiusContext, "DrawCircle radius", out int radius, r => r > 0, "Radius must be positive")) return null;
-    if (radius <= 0)
+        !TryEvaluateAndConvert<int>(stmt.Radius, RadiusContext, "DrawCircle Radius", out int Radius, r => r > 0, "Radius must be positive")) return null;
+    if (Radius <= 0)
     {
-      errors.Add(new Error(radiusContext.line, $"Runtime Error: DrawCircle radius ({radius}) must be positive."));
+      errors.Add(new Error(RadiusContext.line, $"Runtime Error: DrawCircle Radius ({Radius}) must be positive."));
       return null;
     }
-    Walle.DrawCircle(dirX, dirY, radius);
+    Walle.DrawCircle(dirX, dirY, Radius);
     return null;
   }
   public object? VisitDrawRectangleStmt(DrawRectangle stmt)
   {
-    Token fallbackToken = stmt.KeywordToken;
+    Token fallbackToken = stmt.keyword;
     Token dirXContext = FindToken(stmt.dirx) ?? fallbackToken;
     Token dirYContext = FindToken(stmt.diry) ?? fallbackToken;
     Token distContext = FindToken(stmt.distance) ?? fallbackToken;
@@ -272,31 +262,25 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     Walle.Fill();
     return null;
   }
-  public object VisitGetActualX(GetActualX expresion)
-  {
-    return Walle.GetActualX();
-  }
-  public object VisitGetActualY(GetActualY expresion)
-  {
-    return Walle.GetActualY();
-  }
+  public object VisitGetActualX(GetActualX expresion) => Walle.GetActualX();
+  public object VisitGetActualY(GetActualY expresion) => Walle.GetActualY();
   public object VisitIsBrushColor(IsBrushColor expresion)
   {
-    Token fallbackToken = expresion.KeywordToken;
+    Token fallbackToken = expresion.keyword;
     Token context = FindToken(expresion.color) ?? fallbackToken;
     if (!TryEvaluateAndConvert<string>(expresion.color, context, "IsBrushColor color", out string colorValue, IsValidColor, $"Value is not a valid color name")) return false;
     return Walle.IsBrushColor(colorValue);
   }
   public object VisitIsBrushSize(IsBrushSize expresion)
   {
-    Token fallbackToken = expresion.KeywordToken;
+    Token fallbackToken = expresion.keyword;
     Token context = FindToken(expresion.size) ?? fallbackToken;
     if (!TryEvaluateAndConvert<int>(expresion.size, context, "IsBrushSize size", out int sizeValue, s => s > 0, "Size must be a positive integer")) return false;
     return Walle.IsBrushSize(sizeValue);
   }
   public object VisitGetColorCount(GetColorCount expresion)
   {
-    Token fallbackToken = expresion.KeywordToken;
+    Token fallbackToken = expresion.keyword;
     Token colorCtx = FindToken(expresion.color) ?? fallbackToken;
     Token x1Ctx = FindToken(expresion.x1) ?? fallbackToken;
     Token y1Ctx = FindToken(expresion.y1) ?? fallbackToken;
@@ -316,7 +300,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   }
   public object VisitIsCanvasColor(IsCanvasColor expresion)
   {
-    Token fallbackToken = expresion.KeywordToken;
+    Token fallbackToken = expresion.keyword;
     Token colorCtx = FindToken(expresion.color) ?? fallbackToken;
     Token vertCtx = FindToken(expresion.vertical) ?? fallbackToken;
     Token horzCtx = FindToken(expresion.horizontal) ?? fallbackToken;
@@ -361,13 +345,10 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     if (expresion.Value == null) return null!;
     return expresion.Value;
   }
-  public object visitGrouping(Grouping expresion)
-  {
-    return evaluate(expresion.expresion!);
-  }
+  public object visitGrouping(Grouping expresion) => evaluate(expresion.expresion!);
   public object visitUnary(Unary expresion)
   {
-    object right = evaluate(expresion.Rightside!);
+    object right = evaluate(expresion.rightside!);
     switch (expresion.Operator!.type)
     {
       case TokenTypes.MINUS:
@@ -379,14 +360,11 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     }
     throw new RuntimeError(expresion.Operator, $"Unknown or unsupported unary operator '{expresion.Operator.writing}'.");
   }
-  public object visitVariable(Variable expresion)
-  {
-    return enviroment.get(expresion.name!);
-  }
+  public object visitVariable(Variable expresion) => enviroment.get(expresion.name!);
   public object visitBinary(Binary expresion)
   {
-    object left = evaluate(expresion.Leftside!);
-    object right = evaluate(expresion.Rightside!);
+    object left = evaluate(expresion.leftside!);
+    object right = evaluate(expresion.rightside!);
     var opToken = expresion.Operator!;
     switch (opToken.type)
     {
@@ -505,13 +483,10 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     var validColors = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Black", "White", "Transparent" };
     return validColors.Contains(normalizedColor);
   }
-  private bool IsValidDir(int dir)
-  {
-    return dir <= 1 && dir >= -1;
-  }
+  private bool IsValidDir(int dir) => dir <= 1 && dir >= -1;
   private bool TryEvaluateAndConvert<T>(Expresion expr, Token contextToken, string argName, out T result, Func<T, bool>? validator = null, string? validationErrorMsg = null)
   {
-    result = default(T)!;
+    result = default!;
     object evaluatedValue;
     int errorLine = contextToken.line;
     try { evaluatedValue = evaluate(expr); }
@@ -565,18 +540,18 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   private Token? FindToken(Expresion? expr)
   {
     if (expr == null) return null;
-    if (expr is Binary bin) return bin.Operator ?? FindToken(bin.Leftside);
-    if (expr is Unary un) return un.Operator ?? FindToken(un.Rightside);
+    if (expr is Binary bin) return bin.Operator ?? FindToken(bin.leftside);
+    if (expr is Unary un) return un.Operator ?? FindToken(un.rightside);
     if (expr is Logical log) return log.Operator ?? FindToken(log.left);
     if (expr is Assign ass) return ass.name ?? FindToken(ass.value);
     if (expr is Variable var) return var.name;
-    if (expr is GetActualX gx) return gx.KeywordToken;
-    if (expr is GetActualY gy) return gy.KeywordToken;
-    if (expr is IsBrushColor ibc) return ibc.KeywordToken ?? FindToken(ibc.color);
-    if (expr is IsBrushSize ibs) return ibs.KeywordToken ?? FindToken(ibs.size);
-    if (expr is GetColorCount gcc) return gcc.KeywordToken ?? FindToken(gcc.color);
-    if (expr is IsCanvasColor icc) return icc.KeywordToken ?? FindToken(icc.color);
-    if (expr is GetCanvasSize gcs) return gcs.KeywordToken;
+    if (expr is GetActualX gx) return gx.keyword;
+    if (expr is GetActualY gy) return gy.keyword;
+    if (expr is IsBrushColor ibc) return ibc.keyword ?? FindToken(ibc.color);
+    if (expr is IsBrushSize ibs) return ibs.keyword ?? FindToken(ibs.size);
+    if (expr is GetColorCount gcc) return gcc.keyword ?? FindToken(gcc.color);
+    if (expr is IsCanvasColor icc) return icc.keyword ?? FindToken(icc.color);
+    if (expr is GetCanvasSize gcs) return gcs.keyword;
     if (expr is Grouping grp) return FindToken(grp.expresion);
     if (expr is Literal lit) return null;
     return null;
@@ -597,9 +572,6 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
 }
 public class RuntimeError : Exception
 {
-  public Token? token { get; }
-  public RuntimeError(Token? token, string message) : base(message)
-  {
-    this.token = token;
-  }
+  public Token? token { get; private set; }
+  public RuntimeError(Token? token, string message) : base(message) => this.token = token;
 }
