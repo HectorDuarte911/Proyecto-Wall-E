@@ -1,4 +1,5 @@
 namespace WALLE;
+
 public class Canva
 {
     protected static string[,]? canvas;
@@ -60,5 +61,9 @@ public class Canva
     public static string GetCellColor(int x, int y)
     {
         return canvas![x, y];
+    }
+    public static void SetCellColor(int x, int y, string color)
+    {
+        if (!IsOutRange(x, y) && canvas != null) canvas[y, x] = color;
     }
 }

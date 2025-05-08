@@ -8,32 +8,47 @@
     mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="700"
     x:Class="PixelWallE.MainWindow" 
     x:DataType="vm:MainWindowViewModel"
-    Icon="/Assets/avalonia-logo.ico"
+    Icon="/Assets/Machi-Icon.ico"
     Title="PixelWallE">
+    <Window.Background>
+        <ImageBrush Source="avares://PixelWallE/Assets/FondPic.png"
+                    Stretch="UniformToFill"
+                    Opacity="0.4" />
+    </Window.Background>
    <Grid ColumnDefinitions="2*, Auto, *" Margin="5">
-        <views:DrawCanvasView Grid.Column="0"
+            <views:DrawCanvasView Grid.Column="0"
                                  DataContext="{Binding CanvasViewModel}" /> 
         <GridSplitter Grid.Column="1"
                       Width="5"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Stretch"
-                      Background="Black"
+                      Background="Transparent"
                       ResizeBehavior="PreviousAndNext"/>
-                <Grid Grid.Column="2" RowDefinitions="*, Auto, Auto, Auto"> 
+                <Grid Grid.Column="2" RowDefinitions="*, Auto, Auto, Auto , Auto , Auto"> 
             <views:TextEditorView Grid.Row="0"
                                   DataContext="{Binding EditorViewModel}"/>
             <GridSplitter Grid.Row="1"
                           Height="5"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Center"
-                          Background="Black"
+                          Background="Transparent"
                           ResizeBehavior="PreviousAndNext"/>
             <Button Grid.Row="2"
                     Content="Ejecute"
                     Command="{Binding RunScriptCommand}"
                     HorizontalAlignment="Stretch"
                     Margin="5"/>
-            <Border Grid.Row="3"
+                    <Button Grid.Row="3"
+                    Content="Save Draw"
+                    Command="{Binding CanvasViewModel.SaveCanvasCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="5,0,5,5"/> 
+            <Button Grid.Row="4"
+                    Content="Load Draw"
+                    Command="{Binding CanvasViewModel.LoadCanvasCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="5,0,5,5"/>
+            <Border Grid.Row="5"
                     Background="#FF333333"
                     BorderBrush="DarkGray"
                     BorderThickness="1"

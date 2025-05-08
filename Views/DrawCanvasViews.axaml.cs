@@ -1,4 +1,3 @@
-// PixelWallE.Views/DrawCanvasView.cs
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
@@ -156,4 +155,5 @@ public partial class DrawCanvasView : UserControl
         DataContextChanged -= OnDataContextChanged;
         base.OnDetachedFromVisualTree(e);
     }
+    
 }

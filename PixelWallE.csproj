@@ -9,6 +9,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>PixelWallE</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
+     <ApplicationIcon>Assets/Machi-Icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
