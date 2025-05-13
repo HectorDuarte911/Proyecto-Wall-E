@@ -12,7 +12,7 @@
             <NumericUpDown Value="{Binding CanvasDimension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            Minimum="2"
                            Maximum="{Binding MaxCanvasDimension}"
-                           Width="80"
+                           Width="150"
                            Increment="1"
                            VerticalAlignment="Center"/>
         </StackPanel>

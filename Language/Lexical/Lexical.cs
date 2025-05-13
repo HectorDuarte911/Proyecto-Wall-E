@@ -63,6 +63,7 @@ public class Lexical
       case ',': AddToken(TokenTypes.COMMA); break;
       case '+': AddToken(TokenTypes.PLUS); break;
       case '-': AddToken(TokenTypes.MINUS); break;
+      case '_': errors.Add(new Error(line, "Unexpected character '_' can't initialisade a label or variable name"));break;
       case '*': AddToken(Match('*') ? TokenTypes.POW : TokenTypes.PRODUCT); break;
       case '!': AddToken(Match('=') ? TokenTypes.BANG_EQUAL : TokenTypes.BANG); break;
       case '>': AddToken(Match('=') ? TokenTypes.GREATER_EQUAL : TokenTypes.GREATER); break;
@@ -77,7 +78,7 @@ public class Lexical
         break;
     }
   }
-  private bool IsAlpha(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-';
+  private bool IsAlpha(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
   private bool IsAlphaNumeric(char c) => IsAlpha(c) || ISDigit(c);
   private void StringRead()
   {

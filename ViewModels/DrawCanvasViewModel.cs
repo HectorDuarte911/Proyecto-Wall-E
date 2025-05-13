@@ -1,15 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WALLE;
-using System.IO;
 using System.Text.Json;
 using Avalonia.Platform.Storage;
-using Avalonia.Controls;
-using System.Threading.Tasks;
 using PixelWallE.Models;
-
 namespace PixelWallE.ViewModels;
-
 public partial class DrawCanvasViewModel : ObservableObject
 {
     public int MaxCanvasDimension => 300;
@@ -109,8 +104,8 @@ public partial class DrawCanvasViewModel : ObservableObject
                     {
                         for (int j = 0; j < newDim; j++)
                         {
-                            if (i < loadedData.CellColors.Length && j < loadedData.CellColors[i].Length)Canva.SetCellColor(j, i, loadedData.CellColors[i][j]);
-                            else Canva.SetCellColor(j, i, "White");
+                            if (i < loadedData.CellColors.Length && j < loadedData.CellColors[i].Length)Canva.SetCellColor(i, j, loadedData.CellColors[i][j]);
+                            else Canva.SetCellColor(i, j, "White");
                         }
                     }
                     Walle.Spawn(newDim / 2, newDim / 2);

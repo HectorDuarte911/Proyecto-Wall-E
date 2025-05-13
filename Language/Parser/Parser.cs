@@ -488,7 +488,7 @@ public class Parser
         case TokenTypes.DRAWRECTANGLE:
         case TokenTypes.FILL:
         case TokenTypes.IDENTIFIER:
-          return;
+        return;
       }
       Advance();
     }

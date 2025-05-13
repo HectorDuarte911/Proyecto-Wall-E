@@ -13,11 +13,11 @@
     <Window.Background>
         <ImageBrush Source="avares://PixelWallE/Assets/FondPic.png"
                     Stretch="UniformToFill"
-                    Opacity="0.4" />
+                    Opacity="1.0" />
     </Window.Background>
    <Grid ColumnDefinitions="2*, Auto, *" Margin="5">
             <views:DrawCanvasView Grid.Column="0"
-                                 DataContext="{Binding CanvasViewModel}" /> 
+             DataContext="{Binding CanvasViewModel}" /> 
         <GridSplitter Grid.Column="1"
                       Width="5"
                       HorizontalAlignment="Center"
@@ -26,7 +26,7 @@
                       ResizeBehavior="PreviousAndNext"/>
                 <Grid Grid.Column="2" RowDefinitions="*, Auto, Auto, Auto , Auto , Auto"> 
             <views:TextEditorView Grid.Row="0"
-                                  DataContext="{Binding EditorViewModel}"/>
+            DataContext="{Binding EditorViewModel}"/>
             <GridSplitter Grid.Row="1"
                           Height="5"
                           HorizontalAlignment="Stretch"
