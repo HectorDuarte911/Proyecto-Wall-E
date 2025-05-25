@@ -3,11 +3,16 @@ using CommunityToolkit.Mvvm.Input;
 using System.Text;
 using WALLE;
 namespace PixelWallE.ViewModels;
-
 public partial class MainWindowViewModel : ObservableObject
 {
+    /// <summary>
+    /// The canvas view state a the window
+    /// </summary>
     [ObservableProperty]
     private DrawCanvasViewModel _canvasViewModel;
+    /// <summary>
+    /// The text editor view state of the window
+    /// </summary>
     [ObservableProperty]
     private TextEditorViewModel _editorViewModel;
     [ObservableProperty]
@@ -18,6 +23,9 @@ public partial class MainWindowViewModel : ObservableObject
         _editorViewModel = new TextEditorViewModel();
         _canvasViewModel.CanvasDimension = _canvasViewModel.GetBackendCanvasDimension();
     }
+    /// <summary>
+    /// Start the function of the application
+    /// </summary>
     [RelayCommand]
     private void RunScript()
     {
@@ -95,6 +103,9 @@ public partial class MainWindowViewModel : ObservableObject
             CanvasViewModel.SignalCanvasUpdate();
         }
     }
+    /// <summary>
+    ///Show to the user all the arrors commited in the code work 
+    /// </summary>
     private void ShowErrors(List<Error> errorsToShow)
     {
         if (errorsToShow == null || errorsToShow.Count == 0) return;

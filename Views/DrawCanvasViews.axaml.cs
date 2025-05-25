@@ -16,6 +16,9 @@ public partial class DrawCanvasView : UserControl
         this.FindControl<Canvas>("DrawCanvas")!.SizeChanged += OnCanvasSizeChanged;
         DataContextChanged += OnDataContextChanged;
     }
+    /// <summary>
+    /// Detected the changed of the data in the canvas
+    /// </summary>
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         if (_viewModel != null)
@@ -32,31 +35,38 @@ public partial class DrawCanvasView : UserControl
         }
         else ClearGrid();
     }
+    /// <summary>
+    /// Detected if is correct draw a canvas in the time
+    /// </summary>
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(DrawCanvasViewModel.CanvasDimension)) DrawGrid();
     }
+    /// <summary>
+    /// Redraw the canvas whith a redraw event
+    /// </summary>
     private void OnCanvasNeedsRedraw(object? sender, EventArgs e) => DrawGrid();
+    /// <summary>
+    /// Redraw the canvas whith a size changed event
+    /// </summary>
     private void OnCanvasSizeChanged(object? sender, SizeChangedEventArgs e) => DrawGrid();
+    /// <summary>
+    /// Clear all the canvas
+    /// </summary>
     private void ClearGrid()
     {
         var canvas = this.FindControl<Canvas>("DrawCanvas");
         if (canvas != null) canvas.Children.Clear();
     }
+    /// <summary>
+    /// Draw the canvas 
+    /// </summary>
     private void DrawGrid()
     {
         var canvas = this.FindControl<Canvas>("DrawCanvas");
-        if (canvas == null || _viewModel == null)
-        {
-            ClearGrid();
-            return;
-        }
+        if (canvas == null || _viewModel == null){ClearGrid();return;}
         int dimension = _viewModel.CanvasDimension;
-        if (dimension <= 0)
-        {
-            ClearGrid();
-            return;
-        }
+        if (dimension <= 0){ClearGrid();return;}
         canvas.Children.Clear();
         double canvasWidth = canvas.Bounds.Width;
         double canvasHeight = canvas.Bounds.Height;
@@ -88,17 +98,14 @@ public partial class DrawCanvasView : UserControl
                 Canvas.SetTop(rect, cellTop);
                 if (j == walleX && i == walleY && !Canva.IsOutRange(j, i))
                 {
-                    rect.Fill = Brushes.White;
+                    rect.Fill = GetBrushFromString(Canva.GetCellColor(j, i));
                     canvas.Children.Add(rect);
                     DrawWalleIcon(canvas, cellLeft, cellTop, cellSize);
                 }
                 else
                 {
                     string colorString = "White";
-                    try
-                    {
-                        if (!Canva.IsOutRange(j, i)) colorString = Canva.GetCellColor(j, i);
-                    }
+                    try { if (!Canva.IsOutRange(j, i)) colorString = Canva.GetCellColor(j, i); }
                     catch (IndexOutOfRangeException) { colorString = "Pink"; }
                     catch (NullReferenceException) { colorString = "Pink"; }
                     rect.Fill = GetBrushFromString(colorString);
@@ -107,6 +114,9 @@ public partial class DrawCanvasView : UserControl
             }
         }
     }
+    /// <summary>
+    /// Draw the walle icon in the cell introduced
+    /// </summary>
     private void DrawWalleIcon(Canvas canvas, double cellX, double cellY, double cellSize)
     {
         IBrush headBrush = Brushes.Goldenrod;
@@ -213,6 +223,9 @@ public partial class DrawCanvasView : UserControl
         Canvas.SetTop(antennaTop, Canvas.GetTop(antennaStalk) - antennaTopHeight * 0.7);
         canvas.Children.Add(antennaTop);
     }
+    /// <summary>
+    /// Convert the string color to a brush color
+    /// </summary>
     private IBrush GetBrushFromString(string? colorString)
     {
         string normalizedColor = colorString?.Trim() ?? "Transparent";

@@ -10,7 +10,7 @@ public class Token
     /// </summary>
     public string writing{get;private set;}
     /// <summary>
-    /// 
+    /// Value of the token
     /// </summary>
     public object literal{get;private set;}
     /// <summary>
@@ -20,10 +20,6 @@ public class Token
     /// <summary>
     /// Constructor of Token
     /// </summary>
-    /// <param name="type"></param>
-    /// <param name="writing"></param>
-    /// <param name="literal"></param>
-    /// <param name="line"></param>
     public Token(TokenTypes type,string writing , object literal, int line)
     {
         this.type = type;

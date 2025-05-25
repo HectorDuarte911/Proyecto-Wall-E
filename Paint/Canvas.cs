@@ -2,15 +2,27 @@ namespace WALLE;
 
 public class Canva
 {
+    /// <summary>
+    /// Save the state of the canvas
+    /// </summary>
     protected static string[,]? canvas;
+    /// <summary>
+    /// Comprove if the position is aout of the canvas size
+    /// </summary>
     public static bool IsOutRange(int x, int y)
     {
         return x >= canvas!.GetLength(0) || y >= canvas.GetLength(0) || x < 0 || y < 0;
     }
+    /// <summary>
+    /// Get the actual size of the canvas
+    /// </summary>
     public static int GetCanvasSize()
     {
         return canvas!.GetLength(0);
     }
+    /// <summary>
+    /// See the number of pixel of one color in a rectangle area
+    /// </summary>\
     public static int GetColorCount(string? color, int x1, int y1, int x2, int y2)
     {
         int MaxX = Math.Max(x1, x2); int MinX = Math.Min(x1, x2);
@@ -25,15 +37,24 @@ public class Canva
         }
         return count;
     }
+    /// <summary>
+    /// Comprove is the pixel in the position have the same introduce color
+    /// </summary>
     public static bool IsCanvasColor(string? color, int vertical, int horizontal)
     {
         return canvas![Walle.GetActualX() + vertical, Walle.GetActualY() + horizontal] == color;
     }
+    /// <summary>
+    /// Create a new predeterminate canvas
+    /// </summary>
     public static void InitCanvas()
     {
         canvas = new string[50, 50];
         InitInWhite(canvas);
     }
+    /// <summary>
+    /// Paint all the canvas to predeterminate color
+    /// </summary>
     private static void InitInWhite(string?[,] WhiteCanvas)
     {
         for (int i = 0; i < WhiteCanvas.GetLength(1); i++)
@@ -44,6 +65,9 @@ public class Canva
             }
         }
     }
+    /// <summary>
+    /// Redimension the size of the canvas 
+    /// </summary>
     public static void RedimensionCanvas(int dim)
     {
         string?[,] NewCanvas = new string[dim, dim];
@@ -58,10 +82,16 @@ public class Canva
         }
         canvas = NewCanvas!;
     }
+    /// <summary>
+    /// Get the color of the cell in the position
+    /// </summary>
     public static string GetCellColor(int x, int y)
     {
         return canvas![x, y];
     }
+    /// <summary>
+    /// Set a cell color in the position
+    /// </summary>
     public static void SetCellColor(int x, int y, string color)
     {
         if (!IsOutRange(x, y) && canvas != null) canvas[y, x] = color;
