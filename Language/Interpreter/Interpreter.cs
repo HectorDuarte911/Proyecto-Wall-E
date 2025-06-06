@@ -1,4 +1,5 @@
 namespace WALLE;
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,19 +10,21 @@ public class RuntimeError : Exception
   public Token? token { get; private set; }
   public RuntimeError(Token? token, string message) : base(message) => this.token = token;
 }
-/// <summary>///Ejecute the statements/// </summary>
+/// <summary>/// Error throw in the argument evaluation proces/// </summary>
+class ArgumentEvaluationException : RuntimeError
+{
+  public ArgumentEvaluationException(Token token, string message) : base(token, message) { }
+}
+// <summary>///Ejecute the statements/// </summary>
 public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
 {
+  /// <summary>///All the types of binary operation /// </summary>
+  private readonly Dictionary<TokenTypes, IBinaryOperation> BinaryOperations;
   /// <summary>///Action of change a line whith a GoTo statement///</summary>
-  internal class JumpRequest
+  internal class JumpException : Exception
   {
-    public int TargetIndex { get; private set; }
-    public int OriginalGoToIndex { get; private set; }
-    public JumpRequest(int targetIndex, int originalGoToIndex)
-    {
-      TargetIndex = targetIndex;
-      OriginalGoToIndex = originalGoToIndex;
-    }
+    public int TargetIndex { get; }
+    public JumpException(int targetIndex) : base(null, null) => TargetIndex = targetIndex;
   }
   /// <summary>///Error list in ejecution time/// </summary>
   public List<Error> errors { get; private set; }
@@ -41,153 +44,137 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   {
     this.errors = errors;
     enviroment = new Enviroment(errors);
+    BinaryOperations = new Dictionary<TokenTypes, IBinaryOperation>{
+            { TokenTypes.PLUS, new AddOperation() },
+            { TokenTypes.MINUS, new SubtractOperation() }, // Suponiendo que creas esta clase
+            { TokenTypes.PRODUCT, new ProductOperation() },
+            { TokenTypes.DIVIDE, new DivideOperation() },
+            { TokenTypes.MODUL, new ModuloOperation() },
+            { TokenTypes.POW, new PowerOperation() },
+            { TokenTypes.GREATER, new GreaterThanOperation() },
+            { TokenTypes.GREATER_EQUAL, new GreaterEqualOperation() },
+            { TokenTypes.LESS, new LessThanOperation() },
+            { TokenTypes.LESS_EQUAL, new LessEqualOperation() }
+        };
   }
   /// <summary>///Principal method to ejecute all statements/// </summary>
   public void interpret(List<Stmt> statements)
   {
-    labelMap.Clear();
-    labelLineNumbers.Clear();
-    executionSteps = 0;
-    executingStmtIndex = -1;
     try
     {
       PreprocessLabels(statements);
       if (errors.Count > 0) return;
-    }
-    catch (RuntimeError){return;}
-    int currentStatementIndex = 0;
-    while (currentStatementIndex < statements.Count)
-    {
-      executionSteps++;
-      if (executionSteps > MAXSteps)
+      int currentStatementIndex = 0;
+      while (currentStatementIndex < statements.Count)
       {
-        RuntimeError(GetCurrentToken(statements, currentStatementIndex), "Maximum execution steps exceeded. Possible infinite loop detected.");
-        return;
-      }
-      executingStmtIndex = currentStatementIndex;
-      Stmt currentStmt = statements[executingStmtIndex];
-      object? result = null;
-      result = execute(currentStmt);
-      if (result is JumpRequest jump)
-      {
-        if (jump.TargetIndex < 0 || jump.TargetIndex > statements.Count)
+        executionSteps++;
+        if (executionSteps > MAXSteps) throw new RuntimeError(GetCurrentToken(statements, currentStatementIndex), "Maximum execution steps exceeded. Possible infinite loop detected.");
+        executingStmtIndex = currentStatementIndex;
+        try
         {
-          RuntimeError(GetCurrentToken(statements, jump.OriginalGoToIndex),
-          $"Internal error: Jump target index {jump.TargetIndex} is out of bounds (valid range 0-{statements.Count}).");
-          return;
+          execute(statements[executingStmtIndex]);
+          currentStatementIndex++;
         }
-        currentStatementIndex = jump.TargetIndex;
+        catch (JumpException jump) { currentStatementIndex = jump.TargetIndex; }
       }
-      else currentStatementIndex++;
     }
+    catch (RuntimeError err) { ReportRuntimeError(err); }
   }
-  /// <summary>///Execute the actual statement action /// </summary>
+  /// <summary>/// Report an exist RuntimeError/// </summary>
+  private void ReportRuntimeError(RuntimeError err)
+  {
+    int line = err.token?.line ?? (executingStmtIndex >= 0 ? GetCurrentToken(null!, executingStmtIndex)?.line ?? -1 : -1);
+    string where = err.token?.writing ?? "at runtime";
+    string errorMessage = $"[Runtime Error] Line {line} near '{where}': {err.Message}";
+    if (!errors.Any(e => e.Location == line && e.Argument.Contains(err.Message))) errors.Add(new Error(line, errorMessage));
+  }
   private object? execute(Stmt stmt) => stmt.accept(this);
   public object? VisitGoToStmt(GoTo stmt)
   {
-    object? conditionResult = null;
-    Token errorContext = stmt.label?.tag ?? GetCurrentToken(new List<Stmt> { stmt }, 0)!;
-    try{conditionResult = evaluate(stmt.condition);}
-    catch (RuntimeError){return null;}
-    catch (Exception ex)
-    {
-      RuntimeError(errorContext, $"Unexpected internal error evaluating GoTo condition: {ex.Message}");
-      return null;
-    }
+    object conditionResult = evaluate(stmt.condition);
     if (IsTrue(conditionResult))
     {
-      if (stmt.label == null || stmt.label.tag == null)
-      {
-        RuntimeError(errorContext, "Internal Error: GoTo statement has missing label information at runtime.");
-        return null;
-      }
+      if (stmt.label == null || stmt.label.tag == null) throw new RuntimeError(GetCurrentToken(new List<Stmt> { stmt }, 0), "Internal Error: GoTo statement has missing label information.");
       string labelName = stmt.label.tag.writing;
-      if (labelMap.TryGetValue(labelName, out int targetIndex)) return new JumpRequest(targetIndex, executingStmtIndex);
-      else
-      {
-        RuntimeError(stmt.label.tag, $"Undefined label '{labelName}' referenced in GoTo statement.");
-        return null;
-      }
+      if (labelMap.TryGetValue(labelName, out int targetIndex)) throw new JumpException(targetIndex);
+      else throw new RuntimeError(stmt.label.tag, $"Undefined label '{labelName}' referenced in GoTo.");
     }
     return null;
   }
   public object? VisitLabelStmt(Label stmt) => null;
   public object? VisitSpawnStmt(Spawn stmt)
   {
-    Token fallbackToken = stmt.keyword;
-    Token xContext = FindToken(stmt.x) ?? fallbackToken;
-    Token yContext = FindToken(stmt.y) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<int>(stmt.x, xContext, "Spawn X", out int x) || !TryEvaluateAndConvert<int>(stmt.y, yContext, "Spawn Y", out int y)) return null;
-    if (Canva.IsOutRange(x, y)) errors.Add(new Error(xContext.line, $"Runtime Error: Spawn position ({x}, {y}) is out of the canvas bounds."));
-    else Walle.Spawn(x, y);
+    try
+    {
+      Token fallbackToken = stmt.keyword;
+      int x = EvaluateAndConvert<int>(stmt.x, FindToken(stmt.x) ?? fallbackToken, "Spawn X");
+      int y = EvaluateAndConvert<int>(stmt.y, FindToken(stmt.y) ?? fallbackToken, "Spawn Y"); if (Canva.IsOutRange(x, y)) throw new RuntimeError(stmt.keyword, $"La posición de Spawn ({x}, {y}) está fuera de los límites del lienzo.");
+      Walle.Spawn(x, y);
+    }
+    catch (RuntimeError err) { errors.Add(new Error(err.token?.line ?? -1, err.Message)); }
     return null;
   }
   public object? VisitSizeStmt(Size stmt)
   {
-    Token fallbackToken = stmt.keyword;
-    Token context = FindToken(stmt.number) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<int>(stmt.number, context, "Size", out int size)) return null;
-    if (size <= 0) errors.Add(new Error(context.line, $"Runtime Error: Size ({size}) must be a positive integer."));
-    else Walle.Size(size);
+    try
+    {
+      Token context = FindToken(stmt.number) ?? stmt.keyword;
+      int size = EvaluateAndConvert<int>(stmt.number, context, "Size", s => s > 0, "The size must be a positive inter");
+      Walle.Size(size);
+    }
+    catch (RuntimeError err) { errors.Add(new Error(err.token?.line ?? -1, err.Message)); }
     return null;
   }
   public object? VisitColorStmt(Color stmt)
   {
-    Token fallbackToken = stmt.keyword;
-    Token context = FindToken(stmt.color) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<string>(stmt.color, context, "Color", out string colorValue)) return null;
-    if (!IsValidColor(colorValue)) errors.Add(new Error(context.line, $"Runtime Error: '{colorValue}' is not a valid color name."));
-    else Walle.Color(colorValue);
+    try
+    {
+      Token context = FindToken(stmt.color) ?? stmt.keyword;
+      string colorValue = EvaluateAndConvert<string>(stmt.color, context, "Color", IsValidColor, "Is not a valid color name");
+      Walle.Color(colorValue);
+    }
+    catch (RuntimeError err) { errors.Add(new Error(err.token?.line ?? -1, err.Message)); }
     return null;
   }
   public object? VisitDrawLineStmt(DrawLine stmt)
   {
-    Token fallbackToken = stmt.keyword;
-    Token dirXContext = FindToken(stmt.dirx) ?? fallbackToken;
-    Token dirYContext = FindToken(stmt.diry) ?? fallbackToken;
-    Token distContext = FindToken(stmt.distance) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawLine direction X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
-        !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawLine direction Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
-        !TryEvaluateAndConvert<int>(stmt.distance, distContext, "DrawLine distance", out int distance)) return null;
-    Walle.DrawLine(dirX, dirY, distance);
+    try
+    {
+      Token fallbackToken = stmt.keyword;
+      int dirX = EvaluateAndConvert<int>(stmt.dirx, FindToken(stmt.dirx) ?? fallbackToken, "DrawLine dirX", IsValidDir, "Direction must be -1, 0, or 1");
+      int dirY = EvaluateAndConvert<int>(stmt.diry, FindToken(stmt.diry) ?? fallbackToken, "DrawLine dirY", IsValidDir, "Direction must be -1, 0, or 1");
+      int distance = EvaluateAndConvert<int>(stmt.distance, FindToken(stmt.distance) ?? fallbackToken, "DrawLine distance");
+      Walle.DrawLine(dirX, dirY, distance);
+    }
+    catch (RuntimeError err) { errors.Add(new Error(err.token?.line ?? -1, err.Message)); }
     return null;
   }
   public object? VisitDrawCircleStmt(DrawCircle stmt)
   {
-    Token fallbackToken = stmt.keyword;
-    Token dirXContext = FindToken(stmt.dirx) ?? fallbackToken;
-    Token dirYContext = FindToken(stmt.diry) ?? fallbackToken;
-    Token RadiusContext = FindToken(stmt.Radius) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawCircle center offset X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
-        !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawCircle center offset Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
-        !TryEvaluateAndConvert<int>(stmt.Radius, RadiusContext, "DrawCircle Radius", out int Radius, r => r > 0, "Radius must be positive")) return null;
-    if (Radius <= 0)
+    try
     {
-      errors.Add(new Error(RadiusContext.line, $"Runtime Error: DrawCircle Radius ({Radius}) must be positive."));
-      return null;
+      Token fallbackToken = stmt.keyword;
+      int dirX = EvaluateAndConvert<int>(stmt.dirx, FindToken(stmt.dirx) ?? fallbackToken, "DrawCircle center offset X", IsValidDir, "Direction must be -1, 0, o 1");
+      int dirY = EvaluateAndConvert<int>(stmt.diry, FindToken(stmt.diry) ?? fallbackToken, "DrawCircle center offset Y", IsValidDir, "Direction must be -1, 0, o 1");
+      int radius = EvaluateAndConvert<int>(stmt.Radius, FindToken(stmt.Radius) ?? fallbackToken, "DrawCircle Radius", r => r > 0, "The radius must be a positive inter");
+      Walle.DrawCircle(dirX, dirY, radius);
     }
-    Walle.DrawCircle(dirX, dirY, Radius);
+    catch (RuntimeError err) { errors.Add(new Error(err.token?.line ?? -1, err.Message)); }
     return null;
   }
   public object? VisitDrawRectangleStmt(DrawRectangle stmt)
   {
-    Token fallbackToken = stmt.keyword;
-    Token dirXContext = FindToken(stmt.dirx) ?? fallbackToken;
-    Token dirYContext = FindToken(stmt.diry) ?? fallbackToken;
-    Token distContext = FindToken(stmt.distance) ?? fallbackToken;
-    Token widthContext = FindToken(stmt.width) ?? fallbackToken;
-    Token heightContext = FindToken(stmt.height) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<int>(stmt.dirx, dirXContext, "DrawRectangle corner offset X", out int dirX, IsValidDir, "Direction must be -1, 0, or 1") ||
-        !TryEvaluateAndConvert<int>(stmt.diry, dirYContext, "DrawRectangle corner offset Y", out int dirY, IsValidDir, "Direction must be -1, 0, or 1") ||
-        !TryEvaluateAndConvert<int>(stmt.distance, distContext, "DrawRectangle distance", out int distance) ||
-        !TryEvaluateAndConvert<int>(stmt.width, widthContext, "DrawRectangle width", out int width, w => w > 0, "Width must be positive") ||
-        !TryEvaluateAndConvert<int>(stmt.height, heightContext, "DrawRectangle height", out int height, h => h > 0, "Height must be positive")) return null;
-    if (width <= 0 || height <= 0)
+    try
     {
-      errors.Add(new Error(widthContext.line, $"Runtime Error: DrawRectangle width ({width}) and height ({height}) must be positive."));
-      return null;
+      Token fallbackToken = stmt.keyword;
+      int dirX = EvaluateAndConvert<int>(stmt.dirx, FindToken(stmt.dirx) ?? fallbackToken, "DrawRectangle center offset X", IsValidDir, "Direction must be -1, 0, o 1");
+      int dirY = EvaluateAndConvert<int>(stmt.diry, FindToken(stmt.diry) ?? fallbackToken, "DrawRectangle center offset Y", IsValidDir, "Direction must be -1, 0, o 1");
+      int distance = EvaluateAndConvert<int>(stmt.distance, FindToken(stmt.distance) ?? fallbackToken, "DrawRectangle distance", r => r > 0, "The sitance to a center must be a positive inter");
+      int width = EvaluateAndConvert<int>(stmt.width, FindToken(stmt.width) ?? fallbackToken, "DrawRectangle width", r => r > 0, "The width must be a positive inter");
+      int height = EvaluateAndConvert<int>(stmt.width, FindToken(stmt.width) ?? fallbackToken, "DrawRectangle height", r => r > 0, "The height must be a positive inter");
+      Walle.DrawRectangle(dirX, dirY, distance, width, height);
     }
-    Walle.DrawRectangle(dirX, dirY, distance, width, height);
+    catch (RuntimeError err) { errors.Add(new Error(err.token?.line ?? -1, err.Message)); }
     return null;
   }
   public object? VisitFillStmt(Fill stmt)
@@ -206,55 +193,37 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   public object VisitGetActualY(GetActualY expresion) => Walle.GetActualY();
   public object VisitIsBrushColor(IsBrushColor expresion)
   {
-    Token fallbackToken = expresion.keyword;
-    Token context = FindToken(expresion.color) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<string>(expresion.color, context, "IsBrushColor color", out string colorValue, IsValidColor, $"Value is not a valid color name")) return false;
+    Token context = FindToken(expresion.color) ?? expresion.keyword;
+    string colorValue = EvaluateAndConvert<string>(expresion.color, context, "IsBrushColor color", IsValidColor, "The value is not a valid color name");
     return Walle.IsBrushColor(colorValue);
   }
   public object VisitIsBrushSize(IsBrushSize expresion)
   {
-    Token fallbackToken = expresion.keyword;
-    Token context = FindToken(expresion.size) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<int>(expresion.size, context, "IsBrushSize size", out int sizeValue, s => s > 0, "Size must be a positive integer")) return false;
+    Token context = FindToken(expresion.size) ?? expresion.keyword;
+    int sizeValue = EvaluateAndConvert<int>(expresion.size, context, "IsBrushSize size", s => s > 0, "The size must be a positive inter");
     return Walle.IsBrushSize(sizeValue);
   }
   public object VisitGetColorCount(GetColorCount expresion)
   {
     Token fallbackToken = expresion.keyword;
-    Token colorCtx = FindToken(expresion.color) ?? fallbackToken;
-    Token x1Ctx = FindToken(expresion.x1) ?? fallbackToken;
-    Token y1Ctx = FindToken(expresion.y1) ?? fallbackToken;
-    Token x2Ctx = FindToken(expresion.x2) ?? fallbackToken;
-    Token y2Ctx = FindToken(expresion.y2) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<string>(expresion.color, colorCtx, "GetColorCount color", out string colorValue, IsValidColor, "Invalid color name") ||
-        !TryEvaluateAndConvert<int>(expresion.x1, x1Ctx, "GetColorCount x1", out int x1Value) ||
-        !TryEvaluateAndConvert<int>(expresion.y1, y1Ctx, "GetColorCount y1", out int y1Value) ||
-        !TryEvaluateAndConvert<int>(expresion.x2, x2Ctx, "GetColorCount x2", out int x2Value) ||
-        !TryEvaluateAndConvert<int>(expresion.y2, y2Ctx, "GetColorCount y2", out int y2Value)) return 0;
-    if (Canva.IsOutRange(x1Value, y1Value) || Canva.IsOutRange(x2Value, y2Value))
-    {
-      errors.Add(new Error(x1Ctx.line, $"Runtime Error: Coordinates provided to GetColorCount are out of canvas bounds."));
-      return 0;
-    }
-    return Canva.GetColorCount(colorValue, x1Value, y1Value, x2Value, y2Value);
+    string colorValue = EvaluateAndConvert<string>(expresion.color, FindToken(expresion.color) ?? fallbackToken, "GetColorCount color", IsValidColor, "Invalid color name");
+    int x1 = EvaluateAndConvert<int>(expresion.x1, FindToken(expresion.x1) ?? fallbackToken, "GetColorCount x1");
+    int y1 = EvaluateAndConvert<int>(expresion.y1, FindToken(expresion.y1) ?? fallbackToken, "GetColorCount y1");
+    int x2 = EvaluateAndConvert<int>(expresion.x2, FindToken(expresion.x2) ?? fallbackToken, "GetColorCount x2");
+    int y2 = EvaluateAndConvert<int>(expresion.y2, FindToken(expresion.y2) ?? fallbackToken, "GetColorCount y2");
+    if (Canva.IsOutRange(x1, y1) || Canva.IsOutRange(x2, y2)) throw new RuntimeError(fallbackToken, $"The coordenates for GetColorCount ({x1},{y1} or {x2},{y2}) are out of the size of the canvas.");
+    return Canva.GetColorCount(colorValue, x1, y1, x2, y2);
   }
   public object VisitIsCanvasColor(IsCanvasColor expresion)
   {
     Token fallbackToken = expresion.keyword;
-    Token colorCtx = FindToken(expresion.color) ?? fallbackToken;
-    Token vertCtx = FindToken(expresion.vertical) ?? fallbackToken;
-    Token horzCtx = FindToken(expresion.horizontal) ?? fallbackToken;
-    if (!TryEvaluateAndConvert<string>(expresion.color, colorCtx, "IsCanvasColor color", out string colorValue, IsValidColor, "Invalid color name") ||
-        !TryEvaluateAndConvert<int>(expresion.vertical, vertCtx, "IsCanvasColor vertical offset", out int verticalValue) ||
-        !TryEvaluateAndConvert<int>(expresion.horizontal, horzCtx, "IsCanvasColor horizontal offset", out int horizontalValue)) return false;
-    int targetX = Walle.GetActualX() + verticalValue;
-    int targetY = Walle.GetActualY() + horizontalValue;
-    if (Canva.IsOutRange(targetX, targetY))
-    {
-      errors.Add(new Error(vertCtx.line, $"Runtime Error: Calculated position ({targetX}, {targetY}) for IsCanvasColor is out of canvas bounds."));
-      return false;
-    }
-    return Canva.IsCanvasColor(colorValue, verticalValue, horizontalValue);
+    string colorValue = EvaluateAndConvert<string>(expresion.color, FindToken(expresion.color) ?? fallbackToken, "IsCanvasColor color", IsValidColor, "Invalid color name");
+    int vertical = EvaluateAndConvert<int>(expresion.vertical, FindToken(expresion.vertical) ?? fallbackToken, "IsCanvasColor vertical offset");
+    int horizontal = EvaluateAndConvert<int>(expresion.horizontal, FindToken(expresion.horizontal) ?? fallbackToken, "IsCanvasColor horizontal offset");
+    int targetX = Walle.GetActualX() + vertical;
+    int targetY = Walle.GetActualY() + horizontal;
+    if (Canva.IsOutRange(targetX, targetY)) throw new RuntimeError(fallbackToken, $"The calculate position to IsCanvasColor ({targetX}, {targetY}) is out the canvas limits.");
+    return Canva.IsCanvasColor(colorValue, vertical, horizontal);
   }
   public object VisitGetCanvasSize(GetCanvasSize expresion) => Canva.GetCanvasSize();
   public object visitAssign(Assign expresion)
@@ -270,17 +239,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
       else if (!IsTrue(left)) return left;
     return evaluate(expresion.right);
   }
-  public object visitLiteral(Literal expresion)
-  {
-    if (expresion.Value is bool b) return b; if (expresion.Value is int i) return i;
-    if (expresion.Value is string s)
-    {
-      if (int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue)) return intValue;
-      return s;
-    }
-    if (expresion.Value == null) return null!;
-    return expresion.Value;
-  }
+  public object visitLiteral(Literal expresion) => expresion.Value;
   public object visitGrouping(Grouping expresion) => evaluate(expresion.expresion!);
   public object visitUnary(Unary expresion)
   {
@@ -302,65 +261,16 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     object left = evaluate(expresion.leftside!);
     object right = evaluate(expresion.rightside!);
     var opToken = expresion.Operator!;
-    switch (opToken.type)
+    if (opToken.type == TokenTypes.BANG_EQUAL) return !IsEqual(left, right);
+    if (opToken.type == TokenTypes.EQUAL_EQUAL) return IsEqual(left, right);
+    if (BinaryOperations.TryGetValue(opToken.type, out var operation))
     {
-      case TokenTypes.PLUS:
-      case TokenTypes.MINUS:
-      case TokenTypes.DIVIDE:
-      case TokenTypes.PRODUCT:
-      case TokenTypes.MODUL:
-        NumberOperands(opToken, left, right);
-        int leftInt = (int)left;
-        int rightInt = (int)right;
-        try
-        {
-          switch (opToken.type)
-          {
-            case TokenTypes.PLUS: return checked(leftInt + rightInt);
-            case TokenTypes.MINUS: return checked(leftInt - rightInt);
-            case TokenTypes.PRODUCT: return checked(leftInt * rightInt);
-            case TokenTypes.DIVIDE:if (rightInt == 0) throw new RuntimeError(opToken, "Division by zero.");return leftInt / rightInt;
-            case TokenTypes.MODUL:if (rightInt == 0) throw new RuntimeError(opToken, "Modulo by zero.");return leftInt % rightInt;
-            default:throw new RuntimeError(opToken, $"Internal logic error: Unhandled arithmetic operator '{opToken.writing}' in inner switch.");
-          }
-        }
-        catch (OverflowException){throw new RuntimeError(opToken, $"Arithmetic operation '{opToken.writing}' resulted in overflow.");}
-      case TokenTypes.POW:
-        NumberOperands(opToken, left, right);
-        int baseVal = (int)left;
-        int expVal = (int)right;
-        if (expVal < 0) throw new RuntimeError(opToken, "Negative exponents are not supported for integer power operations.");
-        if (expVal == 0) return 1;
-        if (baseVal == 0) return 0;
-        if (baseVal == 1) return 1;
-        if (baseVal == -1) return (expVal % 2 == 0) ? 1 : -1;
-        long result = 1;
-        try
-        {
-          for (int i = 0; i < expVal; i++) result = checked(result * baseVal);
-          if (result > int.MaxValue || result < int.MinValue) throw new OverflowException("Final result of power operation exceeds Int32 range.");
-          return (int)result;
-        }
-      catch (OverflowException) {throw new RuntimeError(opToken, $"Arithmetic operation '{baseVal} ** {expVal}' resulted in overflow.");}
-      case TokenTypes.GREATER:
-      case TokenTypes.GREATER_EQUAL:
-      case TokenTypes.LESS:
-      case TokenTypes.LESS_EQUAL:
-        NumberOperands(opToken, left, right);
-        int compLeft = (int)left;
-        int compRight = (int)right;
-        switch (opToken.type)
-        {
-          case TokenTypes.GREATER: return compLeft > compRight;
-          case TokenTypes.GREATER_EQUAL: return compLeft >= compRight;
-          case TokenTypes.LESS: return compLeft < compRight;
-          case TokenTypes.LESS_EQUAL: return compLeft <= compRight;
-          default:throw new RuntimeError(opToken, $"Internal logic error: Unhandled comparison operator '{opToken.writing}' in inner switch.");
-        }
-      case TokenTypes.BANG_EQUAL: return !IsEqual(left, right);
-      case TokenTypes.EQUAL_EQUAL:return IsEqual(left, right);
-      default:throw new RuntimeError(opToken, $"Unknown or unsupported binary operator '{opToken.writing}'.");
+      NumberOperands(opToken, left, right);
+      try { return operation.Execute(opToken, left, right); }
+      catch (RuntimeError) { throw; }
+      catch (Exception ex) { throw new RuntimeError(opToken, $"Internal error during operation '{opToken.writing}': {ex.Message}"); }
     }
+    throw new RuntimeError(opToken, $"Unknown or unsupported binary operator '{opToken.writing}'.");
   }
   /// <summary>///Mark all the valid labels in the beging of the ejecution/// </summary>
   private void PreprocessLabels(List<Stmt> statements)
@@ -417,7 +327,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     if (stmt is Expression exprStmt) return exprStmt.expresion;
     return null;
   }
- /// <summary>///Determinate if two objects are equals/// </summary>
+  /// <summary>///Determinate if two objects are equals/// </summary>
   private bool IsEqual(object? left, object? right)
   {
     if (left == null && right == null) return true;
@@ -468,22 +378,14 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   /// <summary>///Determinate if the number is a valid direction/// </summary>
   private bool IsValidDir(int dir) => dir <= 1 && dir >= -1;
   /// <summary>///Convert an expresion in his literal value/// </summary>
-  private bool TryEvaluateAndConvert<T>(Expresion expr, Token contextToken, string argName, out T result, Func<T, bool>? validator = null, string? validationErrorMsg = null)
+  private T EvaluateAndConvert<T>(Expresion expr, Token contextToken, string argName, Func<T, bool>? validator = null, string? validationErrorMsg = null)
   {
-    result = default!;
     object evaluatedValue;
     int errorLine = contextToken.line;
     try { evaluatedValue = evaluate(expr); }
-    catch (RuntimeError err)
-    {
-      errors.Add(new Error(errorLine, $"Runtime Error evaluating argument '{argName}': {err.Message}"));
-      return false;
-    }
-    catch (Exception ex)
-    {
-      errors.Add(new Error(errorLine, $"Unexpected internal error evaluating argument '{argName}': {ex.Message}"));
-      return false;
-    }
+    catch (RuntimeError err) { throw new RuntimeError(err.token ?? contextToken, $"Error evaluando el argumento '{argName}': {err.Message}"); }
+    catch (Exception ex) { throw new RuntimeError(contextToken, $"Error interno inesperado evaluando el argumento '{argName}': {ex.Message}"); }
+    T result;
     try
     {
       if (evaluatedValue is T typedValue) result = typedValue;
@@ -491,35 +393,20 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
       {
         int intResult;
         if (evaluatedValue is int i) intResult = i;
-        else if (evaluatedValue is string s && int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedInt))
-          intResult = parsedInt;
-        else
-        {
-          errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires an integer value, but got type '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{Stringify(evaluatedValue)}')."));
-          return false;
-        }
+        else throw new RuntimeError(contextToken, $"El argumento '{argName}' requiere un valor entero, pero se obtuvo el tipo '{evaluatedValue?.GetType().Name ?? "null"}' (valor: '{Stringify(evaluatedValue)}').");
         result = (T)(object)intResult;
       }
       else if (typeof(T) == typeof(string)) result = (T)(object)Stringify(evaluatedValue);
       else if (typeof(T) == typeof(bool)) result = (T)(object)IsTrue(evaluatedValue);
-      else
-      {
-        errors.Add(new Error(errorLine, $"Runtime Error: Argument '{argName}' requires a '{typeof(T).Name}' value, but got type '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{Stringify(evaluatedValue)}')."));
-        return false;
-      }
-      if (validator != null && !validator(result))
-      {
-        string specificError = validationErrorMsg ?? $"Validation failed for argument '{argName}'";
-        errors.Add(new Error(errorLine, $"Runtime Error: {specificError} (Actual value: '{Stringify(result)}')"));
-        return false;
-      }
-      return true;
+      else throw new RuntimeError(contextToken, $"El argumento '{argName}' requiere un valor de tipo '{typeof(T).Name}', pero se obtuvo '{evaluatedValue?.GetType().Name ?? "null"}' (valor: '{Stringify(evaluatedValue)}').");
     }
-    catch (Exception ex)
+    catch (Exception ex) { throw new RuntimeError(contextToken, $"Error interno inesperado convirtiendo el argumento '{argName}': {ex.Message}"); }
+    if (validator != null && !validator(result))
     {
-      errors.Add(new Error(errorLine, $"Unexpected internal error converting or validating argument '{argName}': {ex.Message}"));
-      return false;
+      string specificError = validationErrorMsg ?? $"La validación falló para el argumento '{argName}'";
+      throw new RuntimeError(contextToken, $"{specificError} (valor actual: '{Stringify(result)}')");
     }
+    return result;
   }
   /// <summary>///Return the token that correspond the expresion/// </summary>
   private Token? FindToken(Expresion? expr)
@@ -556,7 +443,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     if (stmt is Fill fi) return fi.keyword;
     if (stmt is Expression exprStmt) return FindToken(exprStmt.expresion);
     return null;
-  }  
+  }
   /// <summary>///Declarate and throw a Runtime Error/// </summary>
   private void RuntimeError(Token? token, string message)
   {

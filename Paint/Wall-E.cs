@@ -95,7 +95,7 @@ public class Walle : Canva
     /// </summary>
     public static void DrawCircle(int dirX, int dirY, int radius)
     {
-        if (radius % 2 == 0) radius--;
+        if (radius % 2 == 0) radius++;
         int centerX = dirX * radius + Colum;
         int centerY = dirY * radius + Row;
         int[] x = { 1, -1, 0, 0, 1, -1, 1, -1 };
@@ -140,7 +140,7 @@ public class Walle : Canva
     /// </summary>
     public static void DrawRectangle(int dirX, int dirY, int distance, int width, int height)
     {
-        if (width % 2 == 0) width--; if (height % 2 == 0) height--;
+        if (width % 2 == 0) width++; if (height % 2 == 0) height++;
         int centerX = dirX * distance + Colum;
         int centerY = dirY * distance + Row;
         int[] x = { 1, -1, 0, 0 };
