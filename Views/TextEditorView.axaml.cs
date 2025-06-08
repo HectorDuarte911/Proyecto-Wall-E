@@ -17,7 +17,7 @@ namespace PixelWallE.Views
             new MyCompletionData("Color"), new MyCompletionData("Size"),new MyCompletionData("Spawn"),
             new MyCompletionData("DrawLine"),new MyCompletionData("DrawCircle"),new MyCompletionData("DrawRectangle"),
             new MyCompletionData("GetCanvasSize"),new MyCompletionData("Fill"),new MyCompletionData("IsBrushColor"),
-            new MyCompletionData("GetCellColor"),new MyCompletionData("IsBrushSize"),new MyCompletionData("GetColorCount"),
+            new MyCompletionData("IsBrushSize"),new MyCompletionData("GetColorCount"),
             new MyCompletionData("GetActualX"), new MyCompletionData("GetActualY"),new MyCompletionData("IsCanvasColor"),
             new MyCompletionData("Red"), new MyCompletionData("Blue"), new MyCompletionData("Green"),
             new MyCompletionData("Yellow"), new MyCompletionData("Orange"), new MyCompletionData("Purple"),
@@ -25,7 +25,7 @@ namespace PixelWallE.Views
             new MyCompletionData("Goldenrod"), new MyCompletionData("DarkSlateGray"),new MyCompletionData("GoTo"),
             new MyCompletionData("LightSkyBlue"), new MyCompletionData("DimGray"),new MyCompletionData("true"),
             new MyCompletionData("SaddleBrown"), new MyCompletionData("false")
-        
+
         };
         public TextEditorView()
         {
@@ -95,7 +95,6 @@ namespace PixelWallE.Views
                 string text = textArea.Document.GetText(wordStartOffset, offset - wordStartOffset);
                 return new string(text.TakeWhile(c => char.IsLetterOrDigit(c) || c == '_').ToArray());
             }
-            
             return string.Empty;
         }
         protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

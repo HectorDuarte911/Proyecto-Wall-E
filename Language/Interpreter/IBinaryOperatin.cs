@@ -59,10 +59,7 @@ public class ModuloOperation : IBinaryOperation
 {
     public object Execute(Token op, object left, object right)
     {
-        if (left is int leftInt && right is int rightInt)
-        {
-            return leftInt % rightInt;
-        }
+        if (left is int leftInt && right is int rightInt)return leftInt % rightInt;
         throw new RuntimeError(op, "Operands must be numbers for '%'.");
     }
 }

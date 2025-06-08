@@ -15,22 +15,18 @@ public class Parser
   /// <summary>///Colection of the Labels in the parse/// </summary>
   private Dictionary<string, Token> definedLabels = new Dictionary<string, Token>();
   /// <summary>///Especial type of parser errors /// </summary>
-  private class ParseError : Exception { }
+  private class ParseError : Exception {}
   public Parser(List<Token> tokens, List<Error> errors)
   {
     this.tokens = tokens;
     this.errors = errors ?? new List<Error>();
     definedLabels.Clear();
     StatementParsers = new Dictionary<TokenTypes, StatementParser>{
-            { TokenTypes.GOTO, GoToStatement },
-            { TokenTypes.SPAWN, SpawnStatement },
-            { TokenTypes.SIZE, SizeStatement },
-            { TokenTypes.COLOR, ColorStatement },
-            { TokenTypes.DRAWLINE, DrawLineStatement },
-            { TokenTypes.DRAWCIRCLE, DrawCircleStatement },
-            { TokenTypes.DRAWRECTANGLE, DrawRectangleStatement },
-            { TokenTypes.FILL, FillStatement }
-        };
+    { TokenTypes.GOTO, GoToStatement },{ TokenTypes.SPAWN, SpawnStatement },
+    { TokenTypes.SIZE, SizeStatement },{ TokenTypes.COLOR, ColorStatement },
+    { TokenTypes.DRAWLINE, DrawLineStatement },{ TokenTypes.DRAWCIRCLE, DrawCircleStatement },
+    { TokenTypes.DRAWRECTANGLE, DrawRectangleStatement },{ TokenTypes.FILL, FillStatement }
+    };
   }
   /// <summary>///Principal method that parse all the tokens and convert it to statements /// </summary>
   public List<Stmt> Parse()
@@ -80,7 +76,7 @@ public class Parser
   private List<Expresion> ParseAndValidateArguments(Token keyword, int expectedCount)
   {
     var args = ParseArgumentList(keyword.writing, keyword.line);
-    if (args.Count != expectedCount) throw Error(keyword, $"'{keyword.writing}' espera {expectedCount} argumentos, pero encontró {args.Count}.");
+    if (args.Count != expectedCount) throw Error(keyword, $"'{keyword.writing}' expect {expectedCount} arguments, but found {args.Count}.");
     return args;
   }
   /// <summary>/// Parse a list of arguments/// </summary>
@@ -92,8 +88,8 @@ public class Parser
     {
       do
       {
-        if (arguments.Count >= 255) Error(Peek(), "Cannot have more than 255 arguments.");
-        arguments.Add(Expression());
+        if (arguments.Count >= 250) Error(Peek(), "Cannot have more than 250 arguments.");
+        arguments.Add(Assignment());
       } while (Match(TokenTypes.COMMA));
     }
     ConsumeRightParenSameLine();
@@ -133,7 +129,7 @@ public class Parser
     Stmt labelRef = new Label(labelIdentifierToken);
     consumeSameLine(TokenTypes.RIGHT_BRACE, "after the label name in 'GoTo'", startToken.line);
     consumeSameLine(TokenTypes.LEFT_PAREN, "after ']'", startToken.line);
-    Expresion condition = Expression();
+    Expresion condition = Assignment();
     consumeSameLine(TokenTypes.RIGHT_PAREN, "after the condition in 'GoTo'", startToken.line);
     return new GoTo(condition, labelRef as Label);
   }
@@ -182,7 +178,7 @@ public class Parser
   /// <summary>///Detected the sintax error of an Expresion statement /// </summary>
   private Stmt ExpressionStatement()
   {
-    Expresion expr = Expression();
+    Expresion expr = Assignment();
     if (!(expr is Assign))
     {
       Token errorToken = FindTokenForExpression(expr) ?? Previous() ?? Peek()!;
@@ -192,8 +188,6 @@ public class Parser
     }
     return new Expression(expr);
   }
-  /// <summary>///Detected the sintax error of an expresion /// </summary>
-  private Expresion Expression() => Assignment();
   /// <summary>///Detected the sintax error of an assigment expresion /// </summary>
   private Expresion Assignment()
   {
@@ -259,7 +253,7 @@ public class Parser
     }
     if (Match(TokenTypes.LEFT_PAREN))
     {
-      Expresion expr = Expression();
+      Expresion expr = Assignment();
       ConsumeRightParenSameLine();
       return new Grouping(expr);
     }
@@ -306,12 +300,8 @@ public class Parser
     while (!IsAtEnd())
     {
       if (current > 0 && Previous().line < Peek()!.line) return;
-      switch (Peek()?.type)
-      {
-        case TokenTypes.GOTO:case TokenTypes.SPAWN:case TokenTypes.SIZE:
-        case TokenTypes.COLOR:case TokenTypes.DRAWLINE:case TokenTypes.DRAWCIRCLE:
-        case TokenTypes.DRAWRECTANGLE:case TokenTypes.FILL:case TokenTypes.IDENTIFIER: return;
-      }
+      TokenTypes type = Peek()!.type;
+      if (StatementParsers.ContainsKey(type) || type == TokenTypes.IDENTIFIER) return;
       Advance();
     }
   }
@@ -351,19 +341,11 @@ public class Parser
   /// <summary>///Return the string writing of the diferents types of tokens/// </summary> 
   private string GetTokenTypeString(TokenTypes type)
   {
-    return type switch
+    foreach (char c in Lexical.MatchTokens.Keys)
     {
-      TokenTypes.LEFT_PAREN => "'('",
-      TokenTypes.RIGHT_PAREN => "')'",
-      TokenTypes.LEFT_BRACE => "'['",
-      TokenTypes.RIGHT_BRACE => "']'",
-      TokenTypes.COMMA => "','",
-      TokenTypes.ASSIGNED => "'<-'",
-      TokenTypes.IDENTIFIER => "identifier",
-      TokenTypes.NUMBER => "number",
-      TokenTypes.STRING => "string",
-      _ => type.ToString()
-    };
+      if (Lexical.MatchTokens[c].Item1 == type) return c.ToString();
+    }
+    return type.ToString();
   }
   /// <summary>///Consume a token in the same line and throw a ParseError if isn't right to consume of isn.t in the same line/// </summary> 
   private Token consumeSameLine(TokenTypes type, string contextMsg, int expectedLine)

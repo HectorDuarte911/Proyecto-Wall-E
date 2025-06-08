@@ -18,6 +18,21 @@ public class Lexical
   /// </summary>
   private int line = 1;
   /// <summary>
+  /// Tokens whith their matches
+  /// </summary>
+  public static Dictionary<char, (TokenTypes, List<(char, TokenTypes)>)> MatchTokens = new Dictionary<char, (TokenTypes, List<(char, TokenTypes)>)>()
+  {
+    {'>',(TokenTypes.GREATER,new List<(char, TokenTypes)>(){('=',TokenTypes.GREATER_EQUAL)})},
+    {'<',(TokenTypes.LESS,new List<(char, TokenTypes)>(){('=',TokenTypes.LESS_EQUAL),('-',TokenTypes.ASSIGNED)})},
+    {'!',(TokenTypes.BANG,new List<(char, TokenTypes)>(){('=',TokenTypes.BANG_EQUAL) })},{'&',(TokenTypes.AND,new List<(char, TokenTypes)>(){('&',TokenTypes.AND)})},
+    {'|',(TokenTypes.TRASH,new List<(char, TokenTypes)>(){('|',TokenTypes.OR) })},{'=',(TokenTypes.TRASH,new List<(char, TokenTypes)>(){('=',TokenTypes.EQUAL_EQUAL) })},
+    {'*',(TokenTypes.PRODUCT,new List<(char, TokenTypes)>(){('*',TokenTypes.POW) })},{'(',(TokenTypes.LEFT_PAREN,new List<(char, TokenTypes)>(){})},
+    {')',(TokenTypes.RIGHT_PAREN,new List<(char, TokenTypes)>(){})},{'[',(TokenTypes.LEFT_BRACE,new List<(char, TokenTypes)>(){})},
+    {']',(TokenTypes.RIGHT_BRACE,new List<(char, TokenTypes)>(){})},{'/',(TokenTypes.DIVIDE,new List<(char, TokenTypes)>(){})},
+    {',',(TokenTypes.COMMA,new List<(char, TokenTypes)>(){})},{'%',(TokenTypes.MODUL,new List<(char, TokenTypes)>(){})},
+    {'+',(TokenTypes.PLUS,new List<(char, TokenTypes)>(){})},{'-',(TokenTypes.MINUS,new List<(char, TokenTypes)>(){})},
+  };
+  /// <summary>
   /// Colection of scanning tokens in the source
   /// </summary>
   private List<Token> tokens = new List<Token>();
@@ -51,67 +66,66 @@ public class Lexical
   private void InspectTokens()
   {
     char c = Advance();
-    switch (c)
+    if (MatchTokens.ContainsKey(c))
     {
-      case '(': AddToken(TokenTypes.LEFT_PAREN); break;
-      case ')': AddToken(TokenTypes.RIGHT_PAREN); break;
-      case '[': AddToken(TokenTypes.LEFT_BRACE); break;
-      case ']': AddToken(TokenTypes.RIGHT_BRACE); break;
-      case '/': AddToken(TokenTypes.DIVIDE); break;
-      case '|':
-        if (Match('|')) AddToken(TokenTypes.OR);
-        else errors.Add(new Error(line, "Unexpected character '|' , maybe you want to use ||")); break;
-      case '&': AddToken(Match('&') ? TokenTypes.AND : TokenTypes.AND); break;
-      case '%': AddToken(TokenTypes.MODUL); break;
-      case ',': AddToken(TokenTypes.COMMA); break;
-      case '+': AddToken(TokenTypes.PLUS); break;
-      case '-': AddToken(TokenTypes.MINUS); break;
-      case '_': errors.Add(new Error(line, "Unexpected character '_' can't initialisade a label or variable name")); break;
-      case '*': AddToken(Match('*') ? TokenTypes.POW : TokenTypes.PRODUCT); break;
-      case '!': AddToken(Match('=') ? TokenTypes.BANG_EQUAL : TokenTypes.BANG); break;
-      case '>': AddToken(Match('=') ? TokenTypes.GREATER_EQUAL : TokenTypes.GREATER); break;
-      case '<': AddToken(Match('=') ? TokenTypes.LESS_EQUAL : Match('-') ? TokenTypes.ASSIGNED : TokenTypes.LESS); break;
-      case '=': if (Match('=')) AddToken(TokenTypes.EQUAL_EQUAL); else errors.Add(new Error(line, "Unexpected character '=', maybe you mean '=='? Assignment is '<-'")); break; // Modified error message
-      case ' ': case '\r': case '\t': break;
-      case '\n': line++; break;
-      case '"': StringRead(); break;
-      default:
-        if (ISDigit(c)) NumberRead();
-        else if (IsAlpha(c)) IdentifierOrKeyword();
-        else errors.Add(new Error(line, "Unexpected character"));
-        break;
+      (TokenTypes, List<(char, TokenTypes)>) matches = MatchTokens[c];
+      int count = matches.Item2.Count;
+      if (count == 0) AddToken(MatchTokens[c].Item1);
+      else
+      {
+        foreach ((char matchtype, TokenTypes returnMatch) pair in matches.Item2)
+        {
+          count--;
+          MatchScan(matches.Item1, pair.matchtype, pair.returnMatch, count);
+        }
+      }
     }
+    else if (c == '"') StringRead();
+    else if (c == '\n') line++;
+    else if (c == ' ' || c == '\r' || c == '\t') { }
+    else if (c == '_') errors.Add(new Error(line, "Unexpected character '_' can't initialisade an expresion"));
+    else if (ISDigit(c)) NumberRead();
+    else if (IsAlpha(c)) IdentifierOrKeyword();
+    else errors.Add(new Error(line, "Unexpected character"));
   }
   /// <summary>
-  /// Determinate is is a keyword or a identifer token
+  /// Add a Match Token
   /// </summary>
+  private void MatchScan(TokenTypes defauldMatch, char matchtype, TokenTypes ReturnMatch, int count)
+  {
+    TokenTypes token = TokenTypes.TRASH;
+    if (Match(matchtype)) token = ReturnMatch;
+    else if (count == 0)
+    {
+      if (defauldMatch == TokenTypes.TRASH) errors.Add(new Error(line, $"Unexpected character '{source[current - 1]}' maybe you mean '{source[current - 1]}{source[current -1 ]}'"));
+      else token = defauldMatch;
+    }
+    if (token != TokenTypes.TRASH) AddToken(token);
+  } 
+  /// <summary>
+  /// Existed keywords
+  /// </summary>
+  public static Dictionary<string, TokenTypes> Keywords = new Dictionary<string, TokenTypes>()
+  {
+   {"GoTo",TokenTypes.GOTO},{"Spawn",TokenTypes.SPAWN},{"GetActualX",TokenTypes.GETACTUALX},{"GetActualY",TokenTypes.GETACTUALY},
+   {"Size",TokenTypes.SIZE},{"Color",TokenTypes.COLOR},{"DrawLine",TokenTypes.DRAWLINE},{"DrawCircle",TokenTypes.DRAWCIRCLE},
+   {"DrawRectangle",TokenTypes.DRAWRECTANGLE},{"Fill",TokenTypes.FILL},{"GetCanvasSize",TokenTypes.GETCANVASSIZE},
+   {"IsBrushColor",TokenTypes.ISBRUSHCOLOR},{"IsBrushSize",TokenTypes.ISBRUSHSIZE},{ "GetColorCount",TokenTypes.GETCOLORCOUNT},
+   {"IsCanvasColo",TokenTypes.ISCANVASCOLOR},{ "true",TokenTypes.TRUE},{ "false",TokenTypes.FALSE},
+  };
   private void IdentifierOrKeyword()
   {
     while (IsAlphaNumeric(LookAfter())) Advance();
     string text = source.Substring(start, current - start);
     TokenTypes type;
     object? literal = null;
-    switch (text)
-    {
-      case "GoTo": type = TokenTypes.GOTO; break;
-      case "Spawn": type = TokenTypes.SPAWN; break;
-      case "GetActualX": type = TokenTypes.GETACTUALX; break;
-      case "GetActualY": type = TokenTypes.GETACTUALY; break;
-      case "Size": type = TokenTypes.SIZE; break;
-      case "Color": type = TokenTypes.COLOR; break;
-      case "DrawLine": type = TokenTypes.DRAWLINE; break;
-      case "DrawCircle": type = TokenTypes.DRAWCIRCLE; break;
-      case "DrawRectangle": type = TokenTypes.DRAWRECTANGLE; break;
-      case "Fill": type = TokenTypes.FILL; break;
-      case "GetCanvasSize": type = TokenTypes.GETCANVASSIZE; break;
-      case "IsBrushColor": type = TokenTypes.ISBRUSHCOLOR; break;
-      case "IsBrushSize": type = TokenTypes.ISBRUSHSIZE; break;
-      case "GetColorCount": type = TokenTypes.GETCOLORCOUNT; break;
-      case "IsCanvasColor": type = TokenTypes.ISCANVASCOLOR; break;
-      case "true": type = TokenTypes.TRUE; literal = true; break;
-      case "false": type = TokenTypes.FALSE; literal = false; break;
-      default: type = TokenTypes.IDENTIFIER; literal = text; break;
-    }
+        if (Keywords.ContainsKey(text))
+        {
+            type = Keywords[text];
+            if (text == "true") literal = true;
+            if (text == "false") literal = false;
+        }
+        else { type = TokenTypes.IDENTIFIER; literal = text; }
     AddTokenHelper(type, literal!);
   }
   /// <summary>
@@ -161,7 +175,7 @@ public class Lexical
   /// <summary>
   /// Predeterminate token added
   /// </summary>
-  private void AddToken(TokenTypes type) => AddTokenHelper(type, null!);
+  private void AddToken(TokenTypes type)=>AddTokenHelper(type, null!);
   /// <summary>
   /// General token added to the list
   /// </summary>

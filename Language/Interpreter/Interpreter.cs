@@ -45,17 +45,12 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     this.errors = errors;
     enviroment = new Enviroment(errors);
     BinaryOperations = new Dictionary<TokenTypes, IBinaryOperation>{
-            { TokenTypes.PLUS, new AddOperation() },
-            { TokenTypes.MINUS, new SubtractOperation() }, // Suponiendo que creas esta clase
-            { TokenTypes.PRODUCT, new ProductOperation() },
-            { TokenTypes.DIVIDE, new DivideOperation() },
-            { TokenTypes.MODUL, new ModuloOperation() },
-            { TokenTypes.POW, new PowerOperation() },
-            { TokenTypes.GREATER, new GreaterThanOperation() },
-            { TokenTypes.GREATER_EQUAL, new GreaterEqualOperation() },
-            { TokenTypes.LESS, new LessThanOperation() },
-            { TokenTypes.LESS_EQUAL, new LessEqualOperation() }
-        };
+    { TokenTypes.PLUS, new AddOperation() },{ TokenTypes.MINUS, new SubtractOperation() },
+    { TokenTypes.PRODUCT, new ProductOperation() },{ TokenTypes.DIVIDE, new DivideOperation() },
+    { TokenTypes.MODUL, new ModuloOperation() },{ TokenTypes.POW, new PowerOperation() },
+    { TokenTypes.GREATER, new GreaterThanOperation() },{ TokenTypes.GREATER_EQUAL, new GreaterEqualOperation() },
+    { TokenTypes.LESS, new LessThanOperation() },{ TokenTypes.LESS_EQUAL, new LessEqualOperation() }
+    };
   }
   /// <summary>///Principal method to ejecute all statements/// </summary>
   public void interpret(List<Stmt> statements)
@@ -143,7 +138,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
       Token fallbackToken = stmt.keyword;
       int dirX = EvaluateAndConvert<int>(stmt.dirx, FindToken(stmt.dirx) ?? fallbackToken, "DrawLine dirX", IsValidDir, "Direction must be -1, 0, or 1");
       int dirY = EvaluateAndConvert<int>(stmt.diry, FindToken(stmt.diry) ?? fallbackToken, "DrawLine dirY", IsValidDir, "Direction must be -1, 0, or 1");
-      int distance = EvaluateAndConvert<int>(stmt.distance, FindToken(stmt.distance) ?? fallbackToken, "DrawLine distance");
+      int distance = EvaluateAndConvert<int>(stmt.distance, FindToken(stmt.distance) ?? fallbackToken, "DrawLine distance",distance => distance >= 0,"Distance must be positive");
       Walle.DrawLine(dirX, dirY, distance);
     }
     catch (RuntimeError err) { errors.Add(new Error(err.token?.line ?? -1, err.Message)); }
@@ -235,7 +230,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   public object visitLogical(Logical expresion)
   {
     object left = evaluate(expresion.left);
-    if (expresion.Operator.type == TokenTypes.OR) if (IsTrue(left)) return left;
+    if (expresion.Operator.type == TokenTypes.OR){ if (IsTrue(left)) return left;}
       else if (!IsTrue(left)) return left;
     return evaluate(expresion.right);
   }
@@ -340,9 +335,7 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
   {
     if (ObjectConcrete == null) return false;
     if (ObjectConcrete is bool booleanValue) return booleanValue;
-    if (ObjectConcrete is int intValue) return intValue != 0;
-    if (ObjectConcrete is string stringValue) return !string.IsNullOrEmpty(stringValue);
-    return true;
+    else throw new RuntimeError(new Token(TokenTypes.TRASH, ObjectConcrete.ToString()!, null!, 0), $"A no boolean literal can't be true or false");
   }
   /// <summary>///Check if a unary operand is a valid number /// </summary>
   private void NumberOperand(Token Operator, object? operand)
@@ -383,8 +376,8 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
     object evaluatedValue;
     int errorLine = contextToken.line;
     try { evaluatedValue = evaluate(expr); }
-    catch (RuntimeError err) { throw new RuntimeError(err.token ?? contextToken, $"Error evaluando el argumento '{argName}': {err.Message}"); }
-    catch (Exception ex) { throw new RuntimeError(contextToken, $"Error interno inesperado evaluando el argumento '{argName}': {ex.Message}"); }
+    catch (RuntimeError err) { throw new RuntimeError(err.token ?? contextToken, $"Error evalueting argument '{argName}': {err.Message}"); }
+    catch (Exception ex) { throw new RuntimeError(contextToken, $"Internal error evaluating the argument'{argName}': {ex.Message}"); }
     T result;
     try
     {
@@ -393,18 +386,18 @@ public class Interpreter : Expresion.IVisitor<object>, Stmt.IVisitor<object?>
       {
         int intResult;
         if (evaluatedValue is int i) intResult = i;
-        else throw new RuntimeError(contextToken, $"El argumento '{argName}' requiere un valor entero, pero se obtuvo el tipo '{evaluatedValue?.GetType().Name ?? "null"}' (valor: '{Stringify(evaluatedValue)}').");
+        else throw new RuntimeError(contextToken, $"The argument '{argName}' need a inter value but is '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{Stringify(evaluatedValue)}').");
         result = (T)(object)intResult;
       }
       else if (typeof(T) == typeof(string)) result = (T)(object)Stringify(evaluatedValue);
       else if (typeof(T) == typeof(bool)) result = (T)(object)IsTrue(evaluatedValue);
-      else throw new RuntimeError(contextToken, $"El argumento '{argName}' requiere un valor de tipo '{typeof(T).Name}', pero se obtuvo '{evaluatedValue?.GetType().Name ?? "null"}' (valor: '{Stringify(evaluatedValue)}').");
+      else throw new RuntimeError(contextToken, $"The argument '{argName}' need a value of type '{typeof(T).Name}', but have type '{evaluatedValue?.GetType().Name ?? "null"}' (value: '{Stringify(evaluatedValue)}').");
     }
-    catch (Exception ex) { throw new RuntimeError(contextToken, $"Error interno inesperado convirtiendo el argumento '{argName}': {ex.Message}"); }
+    catch (Exception ex) { throw new RuntimeError(contextToken, $"Internal error convering the argument '{argName}': {ex.Message}"); }
     if (validator != null && !validator(result))
     {
-      string specificError = validationErrorMsg ?? $"La validación falló para el argumento '{argName}'";
-      throw new RuntimeError(contextToken, $"{specificError} (valor actual: '{Stringify(result)}')");
+      string specificError = validationErrorMsg ?? $"The validation fail for the argument'{argName}'";
+      throw new RuntimeError(contextToken, $"{specificError} (actual value: '{Stringify(result)}')");
     }
     return result;
   }
