@@ -11,7 +11,7 @@ Go to the direction *PixelWallE\bin\Release\net9.0* and open the aplication name
 
 💻**How is the project flow?**
 
-The project is diviide in three parts of funcionality:
+The project is divide in three parts of funcionality:
  
  + **Interpret** : Is the logic interpret code and the must important part of the project , is divide in other three parts :
  
@@ -30,8 +30,8 @@ The project is diviide in three parts of funcionality:
  + A save and load buttons to save a pixel art or load a save one
  + Autocompleted
 
- The visal part detected the text introduced in the text editor , then the interpret ejecute the function introduced than change th *Paint* part status, then
- all the change are rreport to the visual part to ajust the representation.
+ The visual part detected the text introduced in the text editor , then the interpret ejecute the function introduced than change th *Paint* part status, then
+ all the change are report to the visual part to ajust the representation.
 
  ⌨️**What commands are allowed now?**
  (!Important! we going to named the cursor of the pixel art Walle)
@@ -59,15 +59,3 @@ The project is diviide in three parts of funcionality:
  🧩**Extended language?**
  
  Yes is not complicated add new functions, colors and signs to the project and that is why this project is open to news features
-
-
-
-
-
-
-
-
-
-
- 
- 
