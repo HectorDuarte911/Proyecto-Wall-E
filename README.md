@@ -1,9 +1,10 @@
-This is a windows develoment project of a pixel art by mean of commands in a text editor named Pixel-Walle :
+This is a windows develoment project of a pixel art by mean of commands in a text editor named Pixel-Walle.
 
 📃**Requisites**
 
-+Avalonias Packages(a good patience to install this package in the worst case)
-+Net.8
++ Avalonias Packages(a good patience to install this package in the worst case)
++ Net.8
+  
 🎰**How run the project?**
 
 Go to the direction *PixelWallE\bin\Release\net9.0* and open the aplication named *PixeWallE* there you can ejecute the project
@@ -12,15 +13,15 @@ Go to the direction *PixelWallE\bin\Release\net9.0* and open the aplication name
 
 The project is diviide in three parts of funcionality:
  
- + **Interpret**:Is the logic interpret code and the must important part of the project , is divide in other three parts :
+ + **Interpret** : Is the logic interpret code and the must important part of the project , is divide in other three parts :
  
- + *Lexical*:Scanned the text introduced, transform it to diferents tokens and detected gramars errors
- + *Parser*:Go to all the scanned tokens and try to convert it to valid expresions and next to valid statements and detect the sintax errors in the proces
- + *Interpret*:Ejecute the statements detected in the *Parser* and detected the ejeutions errors
+ + *Lexical* : Scanned the text introduced, transform it to diferents tokens and detected gramars errors
+ + *Parser* : Go to all the scanned tokens and try to convert it to valid expresions and next to valid statements and detect the sintax errors in the proces
+ + *Interpret* : Ejecute the statements detected in the *Parser* and detected the ejeutions errors
 
- + **Paint**:Is the class that contains the canvas of the colors and all the valid methods to the paint of the canvas
+ + **Paint** : Is the class that contains the canvas of the colors and all the valid methods to the paint of the canvas
 
- + **Avalonia**:The visual representation of the pixel art , have a:
+ + **Avalonia** : The visual representation of the pixel art , have a:
  
  + Text editor to enter commands to the interpret 
  + Visual canvas whith the cursor
@@ -56,6 +57,7 @@ The project is diviide in three parts of funcionality:
  + *Arithmetic expresion*  
 
  🧩**Extended language?**
+ 
  Yes is not complicated add new functions, colors and signs to the project and that is why this project is open to news features
 
 
