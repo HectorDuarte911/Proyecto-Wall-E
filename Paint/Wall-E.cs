@@ -32,49 +32,27 @@ public class Walle : Canva
     /// <summary>
     /// Set a new color to a pincel
     /// </summary>
-    public static void Color(string color)
-    {
-        PincelColor = color;
-    }
+    public static void Color(string color) => PincelColor = color;
     /// <summary>
     /// Get the actual walle colum position;
     /// </summary>
-    public static int GetActualX()
-    {
-        return Colum;
-    }
+    public static int GetActualX()=>Colum;
     /// <summary>
     /// Get the actual walle row position;
     /// </summary>
-    public static int GetActualY()
-    {
-        return Row;
-    }
+    public static int GetActualY()=>Row;
     /// <summary>
     ///Comprove is the brush color is the introduced
     /// </summary>
-    public static bool IsBrushColor(string? color)
-    {
-        return color == PincelColor;
-    }
+    public static bool IsBrushColor(string? color)=> color == PincelColor;
     /// <summary>
     ///Comprove is the brush size is the introduced
     /// </summary>
-    public static bool IsBrushSize(int size)
-    {
-        return size == PincelSize;
-    }
-    /// <summary>
-    ///Draw a line in the direction introduced whith the actual incel color and size
-    /// </summary>
-    public static void DrawLine(int dirX, int dirY, int distance)
-    {
-        DrawSquare(dirX, dirY, distance);
-    }
+    public static bool IsBrushSize(int size) => size == PincelSize;
     /// <summary>
     ///Auxiliar of DrawLine than draw a square whith the pincel size
     /// </summary>
-    private static void DrawSquare(int dirX, int dirY, int distance)
+    public static void DrawLine(int dirX, int dirY, int distance)
     {
         if (distance != 0)
         {
@@ -87,7 +65,7 @@ public class Walle : Canva
                 }
             }
             if (!IsOutRange(Colum + dirX, Row + dirY)) Spawn(Colum + dirX, Row + dirY);
-            DrawSquare(dirX, dirY, distance - 1);
+            DrawLine(dirX, dirY, distance - 1);
         }
     }
     /// <summary>
@@ -100,10 +78,7 @@ public class Walle : Canva
         int centerY = dirY * radius + Row;
         int[] x = { 1, -1, 0, 0, 1, -1, 1, -1 };
         int[] y = { 0, 0, 1, -1, 1, -1, -1, 1 };
-        for (int i = 0; i < 8; i++)
-        {
-            DrawBorder(centerX, centerY, radius, x[i], y[i]);
-        }
+        for (int i = 0; i < 8; i++)DrawBorder(centerX, centerY, radius, x[i], y[i]);
         if (!IsOutRange(centerX, centerY)) Spawn(centerX, centerY);
     }
     /// <summary>
@@ -145,10 +120,7 @@ public class Walle : Canva
         int centerY = dirY * distance + Row;
         int[] x = { 1, -1, 0, 0 };
         int[] y = { 0, 0, 1, -1 };
-        for (int i = 0; i < 4; i++)
-        {
-            DrawBorderRect(centerX, centerY, width, height, x[i], y[i]);
-        }
+        for (int i = 0; i < 4; i++)DrawBorderRect(centerX, centerY, width, height, x[i], y[i]);
         if (!IsOutRange(centerX, centerY)) Spawn(centerX, centerY);
     }
     /// <summary>
@@ -161,7 +133,6 @@ public class Walle : Canva
         else if (dirX == -1) { newX = centerX - width / 2 - 1; newY = centerY - height / 2 - 1; radius = height; }
         else if (dirY == 1) { newY = centerY - height / 2 - 1; newX = centerX + width / 2 + 1; radius = width; }
         else if (dirY == -1) { newY = centerY + height / 2 + 1; newX = centerX - width / 2 - 1; radius = width; }
-
         for (int i = 0; i < radius + 1; i++)
         {
             if (i != 0)
@@ -195,7 +166,6 @@ public class Walle : Canva
                 }
             }
         }
-
     }
     /// <summary>
     /// Helper to the fill method than determinate all the cells valid to paint

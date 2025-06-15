@@ -6,6 +6,8 @@ public class Parser
   private delegate Stmt StatementParser(Token keyword);
   /// <summary>///All the posible statements to parse/// </summary>
   private readonly Dictionary<TokenTypes, StatementParser> StatementParsers;
+  /// <summary>///All the posible primary expresion/// </summary>
+  private readonly Dictionary<TokenTypes, Func<Expresion>> PrimaryParsers;
   /// <summary>///Save de sintaxis errors detected/// </summary>
   public List<Error> errors { get; private set; }
   /// <summary>///Colection of the scanned tokens/// </summary>
@@ -15,7 +17,7 @@ public class Parser
   /// <summary>///Colection of the Labels in the parse/// </summary>
   private Dictionary<string, Token> definedLabels = new Dictionary<string, Token>();
   /// <summary>///Especial type of parser errors /// </summary>
-  private class ParseError : Exception {}
+  private class ParseError : Exception { }
   public Parser(List<Token> tokens, List<Error> errors)
   {
     this.tokens = tokens;
@@ -26,6 +28,19 @@ public class Parser
     { TokenTypes.SIZE, SizeStatement },{ TokenTypes.COLOR, ColorStatement },
     { TokenTypes.DRAWLINE, DrawLineStatement },{ TokenTypes.DRAWCIRCLE, DrawCircleStatement },
     { TokenTypes.DRAWRECTANGLE, DrawRectangleStatement },{ TokenTypes.FILL, FillStatement }
+    };
+    PrimaryParsers = new Dictionary<TokenTypes, Func<Expresion>>
+    {
+        { TokenTypes.FALSE, () => { Advance(); return new Literal(false); } },
+        { TokenTypes.TRUE, () => { Advance(); return new Literal(true); } },
+        { TokenTypes.STRING, () => { Advance(); return new Literal(Previous().literal); } },
+        { TokenTypes.IDENTIFIER, () => { Advance(); return new Variable(Previous()); } },
+        { TokenTypes.NUMBER, () => {Advance();if (int.TryParse((string)Previous().literal, out int val)) return new Literal(val);throw Error(Previous(), "Invalid number format.");}},
+        { TokenTypes.LEFT_PAREN, () => {Advance();Expresion expr = Assignment();ConsumeRightParenSameLine();return new Grouping(expr);}},
+        { TokenTypes.GETACTUALX, () => ParseGetActualX(Advance()) },{ TokenTypes.GETACTUALY, () => ParseGetActualY(Advance()) },
+        { TokenTypes.ISBRUSHCOLOR, () => ParseIsBrushColor(Advance()) },{ TokenTypes.ISBRUSHSIZE, () => ParseIsBrushSize(Advance()) },
+        { TokenTypes.ISCANVASCOLOR, () => ParseIsCanvasColor(Advance()) },{ TokenTypes.GETCOLORCOUNT, () => ParseGetColorCount(Advance()) },
+        { TokenTypes.GETCANVASSIZE, () => ParseGetCanvasSize(Advance()) }
     };
   }
   /// <summary>///Principal method that parse all the tokens and convert it to statements /// </summary>
@@ -172,7 +187,7 @@ public class Parser
   /// <summary>///Detected the sintax error of a Fill statement /// </summary>
   private Stmt FillStatement(Token t)
   {
-    ParseAndValidateArguments(t, 0); // Solo valida, no necesita los argumentos.
+    ParseAndValidateArguments(t, 0);
     return new Fill(t);
   }
   /// <summary>///Detected the sintax error of an Expresion statement /// </summary>
@@ -235,29 +250,10 @@ public class Parser
   /// <summary>///Detected the sintax error of a primary expresion /// </summary>
   private Expresion Primary()
   {
-    if (Match(TokenTypes.FALSE)) return new Literal(false);
-    if (Match(TokenTypes.TRUE)) return new Literal(true);
-    if (Match(TokenTypes.STRING)) return new Literal(Previous().literal);
-    if (Match(TokenTypes.IDENTIFIER)) return new Variable(Previous());
-    if (Match(TokenTypes.GETACTUALX)) return ParseGetActualX(Previous());
-    if (Match(TokenTypes.GETACTUALY)) return ParseGetActualY(Previous());
-    if (Match(TokenTypes.ISBRUSHCOLOR)) return ParseIsBrushColor(Previous());
-    if (Match(TokenTypes.ISBRUSHSIZE)) return ParseIsBrushSize(Previous());
-    if (Match(TokenTypes.ISCANVASCOLOR)) return ParseIsCanvasColor(Previous());
-    if (Match(TokenTypes.GETCOLORCOUNT)) return ParseGetColorCount(Previous());
-    if (Match(TokenTypes.GETCANVASSIZE)) return ParseGetCanvasSize(Previous());
-    if (Match(TokenTypes.NUMBER))
-    {
-      if (int.TryParse((string)Previous().literal, out int val)) return new Literal(val);
-      throw Error(Previous(), "Invalid number format.");
-    }
-    if (Match(TokenTypes.LEFT_PAREN))
-    {
-      Expresion expr = Assignment();
-      ConsumeRightParenSameLine();
-      return new Grouping(expr);
-    }
-    throw Error(Peek(), "Expected expression.");
+    Token? currentToken = Peek();
+    if (currentToken == null) throw Error(null, "Expected expression but found end of file.");
+    if (PrimaryParsers.TryGetValue(currentToken.type, out var parserFunction)) return parserFunction();
+    throw Error(currentToken, "Expected expression.");
   }
   /// <summary>///Detected the sintax error of a GetActualX expresion /// </summary>
   private Expresion ParseGetActualX(Token t)
@@ -363,11 +359,7 @@ public class Parser
     throw Error(Peek(), message);
   }
   /// <summary>///Consume in the same line a right paren token/// </summary>
-  private void ConsumeRightParenSameLine()
-  {
-    int expectedLine = Previous().line;
-    consumeSameLine(TokenTypes.RIGHT_PAREN, "')' to close argument list or expression group", expectedLine);
-  }
+  private void ConsumeRightParenSameLine() => consumeSameLine(TokenTypes.RIGHT_PAREN, "')' to close argument list or expression group", Previous().line);
   /// <summary>///View if the nect token match one of the introduced types/// </summary>
   private bool Match(params TokenTypes[] types)
   {

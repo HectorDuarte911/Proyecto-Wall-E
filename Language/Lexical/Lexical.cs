@@ -24,9 +24,12 @@ public class Lexical
   {
     {'>',(TokenTypes.GREATER,new List<(char, TokenTypes)>(){('=',TokenTypes.GREATER_EQUAL)})},
     {'<',(TokenTypes.LESS,new List<(char, TokenTypes)>(){('=',TokenTypes.LESS_EQUAL),('-',TokenTypes.ASSIGNED)})},
-    {'!',(TokenTypes.BANG,new List<(char, TokenTypes)>(){('=',TokenTypes.BANG_EQUAL) })},{'&',(TokenTypes.AND,new List<(char, TokenTypes)>(){('&',TokenTypes.AND)})},
-    {'|',(TokenTypes.TRASH,new List<(char, TokenTypes)>(){('|',TokenTypes.OR) })},{'=',(TokenTypes.TRASH,new List<(char, TokenTypes)>(){('=',TokenTypes.EQUAL_EQUAL) })},
-    {'*',(TokenTypes.PRODUCT,new List<(char, TokenTypes)>(){('*',TokenTypes.POW) })},{'(',(TokenTypes.LEFT_PAREN,new List<(char, TokenTypes)>(){})},
+    {'!',(TokenTypes.BANG,new List<(char, TokenTypes)>(){('=',TokenTypes.BANG_EQUAL) })},
+    {'&',(TokenTypes.AND,new List<(char, TokenTypes)>(){('&',TokenTypes.AND)})},
+    {'|',(TokenTypes.TRASH,new List<(char, TokenTypes)>(){('|',TokenTypes.OR) })},
+    {'=',(TokenTypes.TRASH,new List<(char, TokenTypes)>(){('=',TokenTypes.EQUAL_EQUAL) })},
+    {'*',(TokenTypes.PRODUCT,new List<(char, TokenTypes)>(){('*',TokenTypes.POW) })},
+    {'(',(TokenTypes.LEFT_PAREN,new List<(char, TokenTypes)>(){})},
     {')',(TokenTypes.RIGHT_PAREN,new List<(char, TokenTypes)>(){})},{'[',(TokenTypes.LEFT_BRACE,new List<(char, TokenTypes)>(){})},
     {']',(TokenTypes.RIGHT_BRACE,new List<(char, TokenTypes)>(){})},{'/',(TokenTypes.DIVIDE,new List<(char, TokenTypes)>(){})},
     {',',(TokenTypes.COMMA,new List<(char, TokenTypes)>(){})},{'%',(TokenTypes.MODUL,new List<(char, TokenTypes)>(){})},
@@ -76,7 +79,7 @@ public class Lexical
         foreach ((char matchtype, TokenTypes returnMatch) pair in matches.Item2)
         {
           count--;
-          MatchScan(matches.Item1, pair.matchtype, pair.returnMatch, count);
+          if (MatchScan(matches.Item1, pair.matchtype, pair.returnMatch, count)) break;;
         }
       }
     }
@@ -91,16 +94,17 @@ public class Lexical
   /// <summary>
   /// Add a Match Token
   /// </summary>
-  private void MatchScan(TokenTypes defauldMatch, char matchtype, TokenTypes ReturnMatch, int count)
+  private bool MatchScan(TokenTypes defauldMatch, char matchtype, TokenTypes ReturnMatch, int count)
   {
     TokenTypes token = TokenTypes.TRASH;
     if (Match(matchtype)) token = ReturnMatch;
     else if (count == 0)
     {
-      if (defauldMatch == TokenTypes.TRASH) errors.Add(new Error(line, $"Unexpected character '{source[current - 1]}' maybe you mean '{source[current - 1]}{source[current -1 ]}'"));
+      if (defauldMatch == TokenTypes.TRASH) errors.Add(new Error(line, $"Unexpected character '{source[current - 1]}' maybe you mean '{source[current - 1]}{source[current - 1]}'"));
       else token = defauldMatch;
     }
-    if (token != TokenTypes.TRASH) AddToken(token);
+    if (token != TokenTypes.TRASH) { AddToken(token); return true; }
+    return false;
   } 
   /// <summary>
   /// Existed keywords

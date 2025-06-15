@@ -9,17 +9,11 @@ public class Canva
     /// <summary>
     /// Comprove if the position is aout of the canvas size
     /// </summary>
-    public static bool IsOutRange(int x, int y)
-    {
-        return x >= canvas!.GetLength(0) || y >= canvas.GetLength(0) || x < 0 || y < 0;
-    }
+    public static bool IsOutRange(int x, int y)=> x >= canvas!.GetLength(0) || y >= canvas.GetLength(0) || x < 0 || y < 0;
     /// <summary>
     /// Get the actual size of the canvas
     /// </summary>
-    public static int GetCanvasSize()
-    {
-        return canvas!.GetLength(0);
-    }
+    public static int GetCanvasSize() => canvas!.GetLength(0);
     /// <summary>
     /// See the number of pixel of one color in a rectangle area
     /// </summary>\
@@ -40,10 +34,7 @@ public class Canva
     /// <summary>
     /// Comprove is the pixel in the position have the same introduce color
     /// </summary>
-    public static bool IsCanvasColor(string? color, int vertical, int horizontal)
-    {
-        return canvas![Walle.GetActualX() + vertical, Walle.GetActualY() + horizontal] == color;
-    }
+    public static bool IsCanvasColor(string? color, int vertical, int horizontal) => canvas![Walle.GetActualX() + vertical, Walle.GetActualY() + horizontal] == color;
     /// <summary>
     /// Create a new predeterminate canvas
     /// </summary>
@@ -85,10 +76,7 @@ public class Canva
     /// <summary>
     /// Get the color of the cell in the position
     /// </summary>
-    public static string GetCellColor(int x, int y)
-    {
-        return canvas![x, y];
-    }
+    public static string GetCellColor(int x, int y) => canvas![x, y];
     /// <summary>
     /// Set a cell color in the position
     /// </summary>
